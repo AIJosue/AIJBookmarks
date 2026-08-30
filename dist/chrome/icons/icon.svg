@@ -1,0 +1,21 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a73e8" />
+      <stop offset="100%" stop-color="#1557b0" />
+    </linearGradient>
+  </defs>
+  <!-- Premium Circle with shadow/gradient -->
+  <circle cx="512" cy="512" r="480" fill="url(#blueGrad)" />
+  <!-- Center White Bookmark flag -->
+  <g transform="translate(224, 224) scale(24)">
+    <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" fill="#FFFFFF"/>
+  </g>
+  <!-- Premium Sparkles (AI Accent) in top-right -->
+  <g transform="translate(680, 240) scale(1.8)">
+    <path d="M 0,-40 L 5,-10 L 35,-5 L 5,0 L 0,30 L -5,0 L -35,-5 L -5,-10 Z" fill="#FFFFFF" opacity="0.9"/>
+  </g>
+  <g transform="translate(770, 340) scale(0.9)">
+    <path d="M 0,-40 L 5,-10 L 35,-5 L 5,0 L 0,30 L -5,0 L -35,-5 L -5,-10 Z" fill="#FFFFFF" opacity="0.8"/>
+  </g>
+</svg>

@@ -1,0 +1,28 @@
+{
+  "name": "aijbookmarks",
+  "version": "3.1.0",
+  "description": "AI-powered bookmark organizer Chrome extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "build:icons": "node scripts/build-icons.mjs",
+    "version:patch": "node scripts/bump-version.mjs patch",
+    "version:minor": "node scripts/bump-version.mjs minor",
+    "version:major": "node scripts/bump-version.mjs major",
+    "build": "./scripts/build.sh all",
+    "build:chrome": "./scripts/build.sh chrome",
+    "build:firefox": "./scripts/build.sh firefox"
+  },
+  "devDependencies": {
+    "eslint": "^10.9.0",
+    "sharp": "^0.35.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AIJosue/AIJbookmarks.git"
+  },
+  "author": "AIJosue",
+  "license": "UNLICENSED"
+}

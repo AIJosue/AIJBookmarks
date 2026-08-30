@@ -1,0 +1,105 @@
+# AIJbookmarks — Privacy Policy
+
+**Last updated:** May 2026
+
+AIJbookmarks (“the extension”) is a Chrome extension that uses AI to categorize and organize your bookmarks. This policy describes what data the extension uses and where it goes.
+
+---
+
+## We Do Not Collect Your Data
+
+The extension has **no backend server**. The developer does not receive, store, or process your personal data, bookmarks, or browsing history.
+
+---
+
+## Data Stored on Your Device
+
+The extension uses Chrome’s **sync storage** to save only the settings you enter in Extension Settings:
+
+- **AI provider** (Anthropic, OpenAI, Gemini, or OpenRouter)
+- **API keys** (Anthropic, OpenAI, Gemini, and/or OpenRouter API keys)
+- **AI models** (if using OpenAI, Gemini, or OpenRouter)
+- **Instapaper** username and password (optional)
+- **Todoist** API token (optional)
+- **Readwise** access token (optional)
+- **Raindrop.io** access token (optional)
+
+Health check diagnostic results and real-time scanning progress are stored temporarily in Chrome's fast in-memory **session storage (RAM)** and are never written to disk or sent to any server. They are automatically cleared when the browser closes.
+
+This data is stored by Chrome and may sync across your signed-in Chrome browsers according to [Google’s Chrome Sync policy](https://support.google.com/chrome/answer/185277). The extension does not send this data to the extension developer or to any server we operate.
+
+---
+
+## Data Sent to Third-Party Services
+
+When you use a feature, the extension sends the minimum required data **only to the services you configure**.
+
+### When you analyze or bookmark a page
+
+- **URL** of the page you are saving  
+- **Page title** (from the tab or from the page)  
+- **Page content** (optional): if the tab title is missing, the extension may fetch the page’s HTML (first ~8,000 characters) so the AI can suggest a title and category  
+- **Your existing bookmark folder names** (so the AI can match to your structure)
+
+This data is sent **only** to the AI provider you chose in settings:
+
+- **Anthropic (Claude)** — [Anthropic Privacy Policy](https://www.anthropic.com/legal/privacy)  
+- **OpenAI (ChatGPT)** — [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy)  
+- **Google Gemini** — [Google Privacy Policy](https://policies.google.com/privacy)  
+- **OpenRouter** — [OpenRouter Privacy Policy](https://openrouter.ai/docs#privacy) (or the provider’s policy for the model you select)
+
+The extension developer does not receive or store this data.
+
+### If you use Instapaper
+
+When the extension saves an article to Instapaper, it sends the **article URL** and **title** to Instapaper’s API. Instapaper’s use of data is governed by [Instapaper’s privacy policy](https://www.instapaper.com/privacy).
+
+### If you use Todoist
+
+When you choose “Create task in Todoist,” the extension sends **task content** (title, URL, and AI-generated summary) to Todoist’s API. Todoist’s use of data is governed by [Todoist’s privacy policy](https://todoist.com/privacy-policy).
+
+### If you use Readwise
+
+When you choose to save to Readwise, the extension sends the bookmark URL, title, and summary directly to Readwise's API. Governed by [Readwise's privacy policy](https://readwise.io/privacy).
+
+### If you use Raindrop.io
+
+When you choose to save to Raindrop, the extension sends the bookmark URL, title, and summary directly to Raindrop's API. Governed by [Raindrop's privacy policy](https://raindrop.io/privacy).
+
+### If you use Things
+
+When you choose “Add to Things,” the extension opens a **things://** URL in a new browser tab. The URL contains the bookmark title, URL, and summary. If you have the Things app (macOS/iOS) installed and set to handle that link, Things will open and create a to-do locally on your device. No data is sent to the extension developer or to Cultured Code’s servers by the extension; the data stays in the URL that your browser and (optionally) Things handle on your device.
+
+---
+
+## Chrome Permissions
+
+- **Bookmarks** — To create, read, and organize bookmarks in your browser.  
+- **Storage** — To save your settings in Chrome sync storage and temporary diagnostics in session RAM.  
+- **Offscreen** — To run WebGPU compute pipelines for fast parallel bookmark search locally on your device.
+- **Context menu** — To add “Analyze and Bookmark with AI” when you right‑click on a page.  
+- **Host access (all websites)** — To fetch the HTML of the page you are bookmarking (only when needed for AI analysis) or perform health check liveness pings.  
+- **Anthropic / OpenAI / Gemini / OpenRouter / Instapaper / Todoist / Readwise / Raindrop** — To call their APIs when you use those features.
+
+The extension does not access sites you don’t open or bookmark through the extension.
+
+---
+
+## Your Choices
+
+- **Don’t use AI:** Don’t use the extension; no data is sent.  
+- **Don’t send page content:** Use the extension only when the tab already has a title (e.g. after the page has loaded); the extension may then avoid fetching HTML.  
+- **Limit third parties:** Don’t add Instapaper or Todoist in settings, and don’t use “Add to Things,” if you don’t want data sent or passed to those apps.  
+- **Remove data:** Uninstall the extension and clear Chrome sync data if you want to remove stored settings.
+
+---
+
+## Changes
+
+We may update this privacy policy from time to time. The “Last updated” date at the top will be revised when we do. Continued use of the extension after changes means you accept the updated policy.
+
+---
+
+## Contact
+
+For privacy-related questions about AIJbookmarks, open an issue on the [GitHub repository](https://github.com/AIJosue/AIJbookmarks) or contact the developer through the project’s listed channels.

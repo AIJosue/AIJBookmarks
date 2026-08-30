@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookmark To Sort – AIJbookmarks</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+      color: #202124;
+      background: #f8f9fa;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+
+    .page-header h1 { font-size: 22px; font-weight: 400; color: #202124; margin-bottom: 6px; }
+    .page-header p  { font-size: 13px; color: #5f6368; }
+
+    .header-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+
+    .scope-card {
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .scope-row { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+    .scope-field { display: flex; flex-direction: column; gap: 4px; min-width: 260px; }
+    .scope-field label { font-weight: 600; font-size: 12px; color: #3c4043; }
+    .scope-field select { height: 34px; border: 1px solid #dadce0; border-radius: 4px; padding: 0 8px; color: #202124; background: #fff; font: inherit; }
+    .scope-field select:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 1px #1a73e8; }
+    .scope-note { margin-top: 8px; color: #5f6368; font-size: 12px; }
+    .scope-options {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid #f1f3f4;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .toggle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3c4043;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .toggle-hint {
+      color: #5f6368;
+      font-size: 12px;
+    }
+
+    .btn {
+      padding: 9px 20px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      transition: background 0.1s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary  { background: #1a73e8; color: #fff; }
+    .btn-primary:not(:disabled):hover  { background: #1557b0; }
+    .btn-secondary { background: #fff; color: #1a73e8; border: 1px solid #dadce0; }
+    .btn-secondary:not(:disabled):hover { background: #f8f9fa; border-color: #1a73e8; }
+
+    .alert {
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .alert-info    { background: #e8f0fe; color: #1967d2; }
+    .alert-success { background: #e6f4ea; color: #137333; }
+    .alert-error   { background: #fce8e6; color: #c5221f; }
+    .alert-loading { background: #e8f0fe; color: #1967d2; }
+
+    .card {
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #5f6368;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dadce0;
+      text-align: left;
+    }
+
+    thead th:first-child { width: 36px; text-align: center; }
+    thead th:last-child  { width: 110px; }
+
+    tbody tr { border-bottom: 1px solid #f1f3f4; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafafa; }
+
+    td { padding: 10px 14px; vertical-align: top; }
+    td:first-child { text-align: center; padding-top: 13px; }
+
+    .bm-title a { color: #202124; text-decoration: none; font-weight: 500; }
+    .bm-title a:hover { text-decoration: underline; color: #1a73e8; }
+    .bm-url {
+      font-size: 11px;
+      color: #80868b;
+      margin-top: 2px;
+      max-width: 380px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .suggestion {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      color: #1967d2;
+      background: #e8f0fe;
+      padding: 2px 7px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .suggestion-edit {
+      width: 100%;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      padding: 3px 7px;
+      border: 1px solid #1a73e8;
+      border-radius: 3px;
+      color: #202124;
+      background: #fff;
+    }
+    .suggestion-edit:focus { outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,.2); }
+
+    .row-status { font-size: 12px; }
+    .row-status.ready    { color: #5f6368; }
+    .row-status.approved { color: #137333; font-weight: 500; }
+    .row-status.denied   { color: #80868b; }
+    .row-status.analyzing{ color: #1967d2; }
+    .row-status.moving   { color: #b06000; }
+    .row-status.done     { color: #137333; font-weight: 500; }
+    .row-status.error    { color: #c5221f; }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #1a73e8;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+    }
+
+    .batch-progress-card {
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+    }
+    .batch-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .batch-progress-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: #202124;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .batch-progress-summary {
+      font-size: 12px;
+      color: #5f6368;
+      font-family: 'Roboto Mono', monospace;
+    }
+    .progress-bar-track {
+      height: 6px;
+      background: #e8eaed;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #1a73e8;
+      transition: width 0.3s ease;
+    }
+    .batch-log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .batch-log-entry {
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border: 1px solid #e8eaed;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s ease;
+    }
+    .batch-log-entry.active {
+      background: #e8f0fe;
+      border-color: #aecbfa;
+    }
+    .batch-log-entry.complete {
+      background: #f8f9fa;
+      border-color: #dadce0;
+    }
+    .batch-log-entry.error {
+      background: #fce8e6;
+      border-color: #f5c2c7;
+    }
+    .batch-log-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+    .batch-log-title {
+      font-weight: 600;
+      font-size: 12px;
+      color: #202124;
+    }
+    .batch-log-items {
+      font-size: 11px;
+      color: #5f6368;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .batch-log-stats {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 11px;
+      color: #1967d2;
+      background: #fff;
+      padding: 3px 7px;
+      border-radius: 4px;
+      border: 1px solid #dadce0;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .batch-log-entry.error .batch-log-stats {
+      color: #c5221f;
+      border-color: #f5c2c7;
+      background: #fff;
+    }
+
+    .btn-danger {
+      background: #ea4335;
+      color: #fff;
+    }
+    .btn-danger:not(:disabled):hover {
+      background: #c5221f;
+    }
+
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: #5f6368;
+    }
+    .empty-state svg { margin-bottom: 12px; opacity: 0.4; }
+    .empty-state p { font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h1>To Sort</h1>
+        <p id="scopeDescription">Bookmarks sitting directly on your Bookmarks Bar or Other Bookmarks, not in any folder.</p>
+      </div>
+      <div class="header-actions">
+        <button id="openSettingsBtn" class="btn btn-secondary" type="button" title="Open Extension Settings">⚙️ Settings</button>
+        <button id="analyzeBtn" class="btn btn-primary" disabled>Analyze Selected</button>
+        <button id="stopAnalysisBtn" class="btn btn-danger" style="display:none">⏹ Stop</button>
+        <button id="applyBtn"   class="btn btn-primary" style="display:none" disabled>Apply Changes (0)</button>
+        <button id="deleteSelectedBtn" class="btn btn-danger" disabled style="display:none">Delete Selected (0)</button>
+      </div>
+    </div>
+
+    <div class="scope-card">
+      <div class="scope-row">
+        <div class="scope-field">
+          <label for="sortScopeMode">Bookmarks to sort</label>
+          <select id="sortScopeMode">
+            <option value="roots">Only direct bookmarks on Bookmarks Bar and Other Bookmarks</option>
+            <option value="folder">Choose a specific folder or subfolder</option>
+          </select>
+        </div>
+        <div class="scope-field" id="sortFolderField" style="display:none">
+          <label for="sortFolderSelect">Folder or subfolder</label>
+          <select id="sortFolderSelect" disabled>
+            <option value="">Choose a folder…</option>
+          </select>
+        </div>
+        <button id="refreshScopeBtn" class="btn btn-secondary" type="button">Refresh</button>
+      </div>
+      <p id="scopeNote" class="scope-note">Safe default: only direct bookmarks on the Bookmarks Bar and Other Bookmarks are included. Folders and their nested contents are excluded.</p>
+      <div class="scope-options" style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label class="toggle-label" for="allowCreateFolders">
+            <input type="checkbox" id="allowCreateFolders">
+            <span>Allow creating new folders</span>
+          </label>
+          <span class="toggle-hint">(Default: off — sorts into existing folders only)</span>
+        </div>
+        <div id="inboxNewFolderControls" style="display: none; margin-left: 28px; display: none; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <div style="display: inline-flex; align-items: center; gap: 6px;">
+            <label for="inboxNewFolderLocation" style="font-size: 12px; color: var(--text-secondary, #64748b);">Create in:</label>
+            <select id="inboxNewFolderLocation" class="form-input-select" style="font-size: 12px; padding: 3px 8px; height: 28px; min-width: 140px;">
+              <option value="root-bar">Bookmarks Bar</option>
+              <option value="root-other">Other Bookmarks</option>
+            </select>
+          </div>
+          <div style="display: inline-flex; align-items: center;">
+            <label class="toggle-label" for="inboxAllowRecursiveFolders" style="font-size: 12px;">
+              <input type="checkbox" id="inboxAllowRecursiveFolders">
+              <span>Allow recursive subfolders</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="alertBox" class="alert alert-loading">Scanning for bookmarks in the selected scope…</div>
+
+    <div id="batchProgressCard" class="card batch-progress-card" style="display:none">
+      <div class="batch-progress-header">
+        <div class="batch-progress-title">
+          <span id="batchProgressSpinner" class="spinner"></span>
+          <span id="batchProgressTitle">Processing Batches…</span>
+        </div>
+        <div class="batch-progress-summary">
+          <span id="batchTimeMetric">0.0s elapsed</span> &bull; <span id="batchTokensMetric">0 in / 0 out tokens</span>
+        </div>
+      </div>
+      <div class="progress-bar-track">
+        <div id="batchProgressBarFill" class="progress-bar-fill"></div>
+      </div>
+      <div id="batchLogList" class="batch-log-list"></div>
+    </div>
+
+    <div id="tableCard" class="card" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAll" title="Approve / Select all"></th>
+            <th>Bookmark</th>
+            <th>Suggested Folder</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="bookmarkRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <datalist id="existingFoldersList"></datalist>
+  <script src="inbox.js"></script>
+</body>
+</html>

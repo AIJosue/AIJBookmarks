@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "AIJbookmarks",
+  "version": "3.1.0",
+  "description": "Automatically organizes, categorizes, and summarizes your browser bookmarks using AI",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "aijbookmarks@AIJosue",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": [
+    "bookmarks",
+    "tabs",
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://aiplatform.googleapis.com/*",
+    "https://www.instapaper.com/*",
+    "https://api.todoist.com/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "24": "icons/icon24.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "24": "icons/icon24.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

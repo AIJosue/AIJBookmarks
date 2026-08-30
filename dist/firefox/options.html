@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIJbookmarks Settings</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+      color: #202124;
+      background: #f8f9fa;
+      line-height: 1.5;
+    }
+
+    
+    .page-container {
+      display: flex;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px;
+      gap: 32px;
+    }
+    .sidebar {
+      width: 200px;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      margin-bottom: 24px;
+    }
+    .sidebar-header h1 {
+      font-size: 20px;
+      font-weight: 500;
+      color: #202124;
+      margin-bottom: 4px;
+    }
+    .sidebar-header p {
+      font-size: 13px;
+      color: #5f6368;
+    }
+    .nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: sticky;
+      top: 40px;
+    }
+    .nav-item {
+      padding: 10px 16px;
+      border-radius: 6px;
+      color: #5f6368;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+      transition: background 0.15s, color 0.15s;
+      cursor: pointer;
+    }
+    .nav-item:hover {
+      background: #f1f3f4;
+      color: #202124;
+    }
+    .nav-item.active {
+      background: #e8f0fe;
+      color: #1967d2;
+    }
+    .content {
+      flex: 1;
+    }
+    .settings-section {
+      display: none;
+    }
+    .settings-section.active {
+      display: block;
+    }
+    .page {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .header {
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 400;
+      color: #202124;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: #5f6368;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #dadce0;
+      margin-bottom: 16px;
+    }
+
+    .card-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #dadce0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #202124;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .badge.required {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+
+    .badge.optional {
+      background: #e6f4ea;
+      color: #137333;
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-group-inline {
+      margin-bottom: 16px;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #202124;
+    }
+
+    .toggle-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #202124;
+      margin-bottom: 8px;
+    }
+
+    .form-hint {
+      font-size: 12px;
+      color: #5f6368;
+      margin-bottom: 8px;
+    }
+
+    .form-hint a {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+
+    .form-hint a:hover {
+      text-decoration: underline;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #202124;
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+
+    .form-input::placeholder {
+      color: #80868b;
+    }
+
+    .form-input.mono {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.1s;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1557b0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: #5f6368;
+      border: 1px solid #dadce0;
+    }
+
+    .btn-secondary:hover {
+      background: #f8f9fa;
+      color: #202124;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .status.visible {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status.success {
+      background: #e6f4ea;
+      color: #137333;
+    }
+
+    .status.error {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+
+    .status.loading {
+      background: #e8f0fe;
+      color: #1967d2;
+    }
+
+    .active-provider-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #202124;
+      background: #e8f0fe;
+      border: 1px solid rgba(26, 115, 232, 0.15);
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
+    .active-provider-badge {
+      background: #1a73e8;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .info-card {
+      background: #e8f0fe;
+      border: none;
+      padding: 16px 24px;
+    }
+
+    .info-card .info-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1967d2;
+      margin-bottom: 8px;
+    }
+
+    .info-card p {
+      font-size: 13px;
+      color: #1967d2;
+      margin-bottom: 8px;
+    }
+
+    .info-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .warning-card {
+      background: #fef7e0;
+      border: none;
+      padding: 16px 24px;
+    }
+
+    .warning-card .warning-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #b05a00;
+      margin-bottom: 8px;
+    }
+
+    .warning-card p {
+      font-size: 13px;
+      color: #b05a00;
+    }
+
+    .provider-tabs {
+      display: flex;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .provider-tab {
+      flex: 1;
+      padding: 9px 16px;
+      border: none;
+      background: #fff;
+      font-size: 13px;
+      font-family: inherit;
+      color: #5f6368;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .provider-tab:not(:last-child) {
+      border-right: 1px solid #dadce0;
+    }
+
+    .provider-tab.active {
+      background: #1a73e8;
+      color: #fff;
+    }
+
+    .provider-tab:not(.active):hover {
+      background: #f8f9fa;
+      color: #202124;
+    }
+
+    .form-input-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #202124;
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%235f6368'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+
+    .form-input-select:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+
+    .form-input-select:disabled {
+      background-color: #f8f9fa;
+      color: #80868b;
+      cursor: not-allowed;
+    }
+
+    .model-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .model-row .form-input-select {
+      flex: 1;
+    }
+
+    .btn-load {
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid #dadce0;
+      background: #fff;
+      color: #1a73e8;
+      font-family: inherit;
+      white-space: nowrap;
+      transition: background 0.1s;
+      flex-shrink: 0;
+    }
+
+    .btn-load:hover {
+      background: #f8f9fa;
+    }
+
+    .btn-load:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .rule-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f3f4;
+      font-size: 13px;
+    }
+
+    .rule-item:last-child {
+      border-bottom: none;
+    }
+
+    .rule-domain {
+      font-family: 'Roboto Mono', monospace;
+      color: #1967d2;
+      background: #e8f0fe;
+      padding: 2px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .rule-arrow {
+      color: #5f6368;
+      flex-shrink: 0;
+    }
+
+    .rule-folder {
+      color: #202124;
+      flex: 1;
+    }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #ea4335;
+      font-size: 16px;
+      padding: 0 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .btn-remove:hover {
+      color: #c5221f;
+    }
+  
+    .interval-tabs { display: flex; border: 1px solid #dadce0; border-radius: 4px; overflow: hidden; margin-top: 8px; width: fit-content; }
+    .interval-tab { flex: 1; padding: 6px 16px; border: none; background: #fff; font-size: 13px; color: #5f6368; cursor: pointer; font-weight: 500; }
+    .interval-tab:not(:last-child) { border-right: 1px solid #dadce0; }
+    .interval-tab.active { background: #1a73e8; color: #fff; }
+    .interval-tab:not(.active):hover { background: #f8f9fa; color: #202124; }
+    .stale-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .stale-input { width: 80px; padding: 6px 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; font-family: inherit; }
+    .stale-input:focus { outline: none; border-color: #1a73e8; }
+    .stale-unit { font-size: 13px; color: #202124; }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #1a1a1a;
+        color: #e8eaed;
+      }
+
+      .sidebar-header h1 {
+        color: #e8eaed;
+      }
+
+      .sidebar-header p {
+        color: #9aa0a6;
+      }
+
+      .nav-item {
+        color: #9aa0a6;
+      }
+
+      .nav-item:hover {
+        background: #3d3d3d;
+        color: #e8eaed;
+      }
+
+      .nav-item.active {
+        background: #1e3a5f;
+        color: #8ab4f8;
+      }
+
+      .header h1 {
+        color: #e8eaed;
+      }
+
+      .header p {
+        color: #9aa0a6;
+      }
+
+      .card {
+        background: #242424;
+        border-color: #3d3d3d;
+      }
+
+      .card-header {
+        border-bottom-color: #3d3d3d;
+      }
+
+      .card-title {
+        color: #e8eaed;
+      }
+
+      .form-label {
+        color: #e8eaed;
+      }
+
+      .form-hint {
+        color: #9aa0a6;
+      }
+
+      .form-hint a {
+        color: #8ab4f8;
+      }
+
+      .form-input {
+        background: #333333;
+        color: #e8eaed;
+        border-color: #3d3d3d;
+      }
+
+      .form-input:focus {
+        border-color: #8ab4f8;
+        box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.2);
+      }
+
+      .form-input::placeholder {
+        color: #6e6e6e;
+      }
+
+      .form-input-select {
+        background-color: #333333;
+        color: #e8eaed;
+        border-color: #3d3d3d;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%239aa0a6'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      }
+
+      .form-input-select:focus {
+        border-color: #8ab4f8;
+        box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.2);
+      }
+
+      .form-input-select:disabled {
+        background-color: #2d2d2d;
+        color: #6e6e6e;
+      }
+
+      .provider-tabs {
+        border-color: #3d3d3d;
+      }
+
+      .provider-tab {
+        background: #2d2d2d;
+        color: #9aa0a6;
+        border-right-color: #3d3d3d;
+      }
+
+      .provider-tab:not(.active):hover {
+        background: #3d3d3d;
+        color: #e8eaed;
+      }
+
+      .btn-secondary {
+        background: #2d2d2d;
+        color: #9aa0a6;
+        border-color: #3d3d3d;
+      }
+
+      .btn-secondary:hover {
+        background: #3d3d3d;
+        color: #e8eaed;
+      }
+
+      .btn-load {
+        background: #2d2d2d;
+        color: #8ab4f8;
+        border-color: #3d3d3d;
+      }
+
+      .btn-load:hover {
+        background: #3d3d3d;
+      }
+
+      .toggle-label {
+        color: #e8eaed;
+      }
+
+      .rule-item {
+        border-bottom-color: #3d3d3d;
+      }
+
+      .rule-domain {
+        background: #1e3a5f;
+        color: #8ab4f8;
+      }
+
+      .rule-arrow {
+        color: #9aa0a6;
+      }
+
+      .rule-folder {
+        color: #e8eaed;
+      }
+
+      .stale-unit {
+        color: #e8eaed;
+      }
+
+      .stale-input {
+        background: #333333;
+        color: #e8eaed;
+        border-color: #3d3d3d;
+      }
+
+      .interval-tabs {
+        border-color: #3d3d3d;
+      }
+
+      .interval-tab {
+        background: #2d2d2d;
+        color: #9aa0a6;
+      }
+
+      .interval-tab:not(:last-child) {
+        border-right-color: #3d3d3d;
+      }
+
+      .interval-tab:not(.active):hover {
+        background: #3d3d3d;
+        color: #e8eaed;
+      }
+
+      .status.loading {
+        background: #1e3a5f;
+        color: #8ab4f8;
+      }
+
+      .active-provider-indicator {
+        background: #1e3a5f;
+        border-color: rgba(138, 180, 248, 0.2);
+        color: #e8eaed;
+      }
+
+      .active-provider-badge {
+        background: #8ab4f8;
+        color: #1a1a1a;
+      }
+
+      .info-card {
+        background: #1e3a5f;
+      }
+
+      .info-card .info-title {
+        color: #8ab4f8;
+      }
+
+      .info-card p {
+        color: #8ab4f8;
+      }
+
+      .warning-card {
+        background: #3d2e00;
+      }
+
+      .warning-card .warning-title {
+        color: #fdd663;
+      }
+
+      .warning-card p {
+        color: #fdd663;
+      }
+
+      .status.success {
+        background: #1a3d2b;
+        color: #81c995;
+      }
+
+      .status.error {
+        background: #3d1a1a;
+        color: #f28b82;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page-container">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1>AIJbookmarks</h1>
+        <p>Settings</p>
+      </div>
+      <nav class="nav-menu">
+        <a class="nav-item active" data-section="section-provider">AI Provider</a>
+        <a class="nav-item" data-section="section-integrations">Integrations</a>
+        <a class="nav-item" data-section="section-rules">Domain Rules</a>
+        <a class="nav-item" data-section="section-health">Health Checks</a>
+        <a class="nav-item" data-section="section-folders">Sorting Preferences</a>
+      </nav>
+    </div>
+    <div class="content">
+      <div class="card info-card">
+        <div class="info-title">How it works</div>
+        <p>When you save a bookmark, the AI analyzes the page content and automatically organizes it into the appropriate folder based on your existing bookmark structure.</p>
+        <p>Articles are sent to Instapaper. Other content is saved to Chrome bookmarks.</p>
+      </div>
+
+      <div class="card warning-card" style="margin-bottom: 24px;">
+        <div class="warning-title">Security</div>
+        <p>API keys are stored in your browser's extension storage and synced across your Chrome devices. Use dedicated API keys with limited scope when possible.</p>
+      </div>
+
+      <form id="settingsForm">
+      <div id="section-provider" class="settings-section active">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">AI Provider</span>
+          <span class="badge required">Required</span>
+        </div>
+        <div class="card-body">
+          <div class="active-provider-indicator">
+            <span>Currently active:</span>
+            <span class="active-provider-badge" id="activeProviderBadge">Anthropic Claude</span>
+          </div>
+
+          <div class="provider-tabs">
+            <button type="button" class="provider-tab active" data-provider="anthropic">Anthropic Claude</button>
+            <button type="button" class="provider-tab" data-provider="openai">OpenAI / Compatible</button>
+            <button type="button" class="provider-tab" data-provider="openrouter">OpenRouter</button>
+            <button type="button" class="provider-tab" data-provider="gemini">Google Gemini API</button>
+            <button type="button" class="provider-tab" data-provider="google-cloud">Google Cloud</button>
+          </div>
+
+          <!-- Anthropic section -->
+          <div id="anthropicSection">
+            <div class="form-group">
+              <label class="form-label" for="anthropicApiKey">API Key</label>
+              <div class="form-hint">
+                Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>
+              </div>
+              <input
+                type="password"
+                id="anthropicApiKey"
+                name="anthropicApiKey"
+                class="form-input mono"
+                placeholder="sk-ant-..."
+                autocomplete="off"
+              >
+            </div>
+          </div>
+
+          <!-- ChatGPT / OpenAI & Compatible section -->
+          <div id="openaiSection" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="openaiBaseUrl">API Base URL / Endpoint</label>
+              <div class="form-hint">
+                Use default <code>https://api.openai.com/v1</code> for OpenAI, or enter any OpenAI-compatible API endpoint (e.g. <code>http://localhost:11434/v1</code> for Ollama, <code>http://localhost:1234/v1</code> for LM Studio, <code>https://api.groq.com/openai/v1</code>, <code>https://api.together.xyz/v1</code>, <code>https://api.deepseek.com/v1</code>, etc.)
+              </div>
+              <input
+                type="text"
+                id="openaiBaseUrl"
+                name="openaiBaseUrl"
+                class="form-input mono"
+                placeholder="https://api.openai.com/v1"
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="openaiApiKey">API Key</label>
+              <div class="form-hint">
+                Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a> (or your compatible provider's dashboard; optional for local LLMs like Ollama or LM Studio)
+              </div>
+              <input
+                type="password"
+                id="openaiApiKey"
+                name="openaiApiKey"
+                class="form-input mono"
+                placeholder="sk-..."
+                autocomplete="off"
+              >
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="openaiModel">Model</label>
+              <div class="form-hint">
+                Choose a model, or click "Fetch Models" to load models from your endpoint.
+              </div>
+              <div class="model-row">
+                <select id="openaiModel" name="openaiModel" class="form-input-select">
+                  <option value="">— click Load Models —</option>
+                </select>
+                <button type="button" class="btn-load" id="loadOpenaiModelsBtn">Load Models</button>
+              </div>
+            </div>
+
+            <div class="form-group" id="openaiCustomModelGroup" style="display: none;">
+              <label class="form-label" for="openaiCustomModel">Custom Model Name</label>
+              <div class="form-hint">
+                Enter the exact model identifier from your OpenAI-compatible service (e.g. <code>llama3.2</code>, <code>mistral-large-latest</code>, <code>deepseek-chat</code>, <code>qwen2.5</code>).
+              </div>
+              <input
+                type="text"
+                id="openaiCustomModel"
+                name="openaiCustomModel"
+                class="form-input mono"
+                placeholder="e.g. llama3.2, mistral, deepseek-chat"
+                autocomplete="off"
+              >
+            </div>
+          </div>
+
+          <!-- OpenRouter section -->
+          <div id="openrouterSection" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="openrouterApiKey">API Key</label>
+              <div class="form-hint">
+                Get your API key from <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a>
+              </div>
+              <input
+                type="password"
+                id="openrouterApiKey"
+                name="openrouterApiKey"
+                class="form-input mono"
+                placeholder="sk-or-..."
+                autocomplete="off"
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="openrouterModel">Model</label>
+              <div class="form-hint">
+                Select a model. Click "Load Models" to fetch the current list from OpenRouter.
+              </div>
+              <div class="model-row">
+                <select id="openrouterModel" name="openrouterModel" class="form-input-select">
+                  <option value="">— click Load Models —</option>
+                </select>
+                <button type="button" class="btn-load" id="loadModelsBtn">Load Models</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Google Gemini section -->
+          <div id="geminiSection" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="geminiApiKey">API Key</label>
+              <div class="form-hint">
+                Get your API key from <a href="https://aistudio.google.com/" target="_blank">aistudio.google.com</a>
+              </div>
+              <input
+                type="password"
+                id="geminiApiKey"
+                name="geminiApiKey"
+                class="form-input mono"
+                placeholder="AQ...."
+                autocomplete="off"
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="geminiModel">Model</label>
+              <select id="geminiModel" name="geminiModel" class="form-input-select">
+                <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                <option value="gemini-3.6-pro">Gemini 3.6 Pro</option>
+                <option value="gemini-3.6-flash-lite">Gemini 3.6 Flash-Lite</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Legacy)</option>
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Google Cloud Gemini Express Mode section -->
+          <div id="googleCloudSection" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="googleCloudApiKey">Google Cloud API Key</label>
+              <div class="form-hint">
+                Use a Google Cloud Express Mode API key from <a href="https://console.cloud.google.com/expressmode" target="_blank">Google Cloud Console</a>. No OAuth verification or project ID is required here.
+              </div>
+              <input
+                type="password"
+                id="googleCloudApiKey"
+                name="googleCloudApiKey"
+                class="form-input mono"
+                placeholder="AIza..."
+                autocomplete="off"
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="googleCloudModel">Model</label>
+              <select id="googleCloudModel" name="googleCloudModel" class="form-input-select">
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="contextWindowSlider">Model Context Window (tokens)</label>
+            <div class="form-hint">
+              Used to size batch analysis and semantic search. Uses strictly binary amounts (powers of 2) to ensure valid context sizing.
+            </div>
+            <div class="model-row" style="margin-bottom: 12px;">
+              <select id="modelContextWindowPreset" name="modelContextWindowPreset" class="form-input-select">
+                <option value="131072">Standard (128k)</option>
+                <option value="262144">Large (256k)</option>
+                <option value="1048576">1M Context</option>
+                <option value="custom">Custom Slider</option>
+              </select>
+            </div>
+            <div class="context-slider-card" style="background: #f8f9fa; border: 1px solid #dadce0; border-radius: 8px; padding: 14px 16px; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 13px; font-weight: 500; color: #202124;">Context Slider</span>
+                <span id="contextWindowValueDisplay" class="badge" style="background: #e8f0fe; color: #1967d2; font-family: 'Roboto Mono', monospace; font-size: 12px; padding: 4px 10px; border-radius: 4px; border: 1px solid #dadce0;">128K (131,072 tokens)</span>
+              </div>
+              <input
+                type="range"
+                id="contextWindowSlider"
+                class="context-slider"
+                min="0"
+                max="9"
+                step="1"
+                value="5"
+                style="width: 100%; cursor: pointer; accent-color: #1a73e8;"
+              >
+              <div class="slider-ticks" style="position: relative; height: 16px; font-size: 11px; color: #5f6368; margin-top: 6px; font-family: 'Roboto Mono', monospace; user-select: none;">
+                <span data-index="0" style="position: absolute; left: 0%; transform: translateX(0%);">4K</span>
+                <span data-index="1" style="position: absolute; left: 11.11%; transform: translateX(-50%);">8K</span>
+                <span data-index="2" style="position: absolute; left: 22.22%; transform: translateX(-50%);">16K</span>
+                <span data-index="3" style="position: absolute; left: 33.33%; transform: translateX(-50%);">32K</span>
+                <span data-index="4" style="position: absolute; left: 44.44%; transform: translateX(-50%);">64K</span>
+                <span data-index="5" style="position: absolute; left: 55.55%; transform: translateX(-50%);">128K</span>
+                <span data-index="6" style="position: absolute; left: 66.66%; transform: translateX(-50%);">256K</span>
+                <span data-index="7" style="position: absolute; left: 77.77%; transform: translateX(-50%);">512K</span>
+                <span data-index="8" style="position: absolute; left: 88.88%; transform: translateX(-50%);">1M</span>
+                <span data-index="9" style="position: absolute; left: 100%; transform: translateX(-100%);">2M</span>
+              </div>
+            </div>
+            <input
+              type="hidden"
+              id="modelContextWindow"
+              name="modelContextWindow"
+              value="131072"
+            >
+            <div class="form-hint" id="contextWindowEstimate" style="margin-top: 8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      </div>
+      <div id="section-integrations" class="settings-section">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Instapaper</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="instapaperEnabled" name="instapaperEnabled">
+              <span>Enable Instapaper</span>
+            </label>
+          </div>
+          <div class="form-group form-group-inline" id="instapaperCheckedByDefaultGroup" style="margin-left: 28px; transition: opacity 0.2s ease;">
+            <label class="toggle-label">
+              <input type="checkbox" id="instapaperCheckedByDefault" name="instapaperCheckedByDefault">
+              <span>Checked by default in popup</span>
+            </label>
+          </div>
+          <div class="form-hint" style="margin-bottom: 16px;">
+            When the AI detects a page as an article, it will be saved to Instapaper instead of added as a Chrome bookmark.
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="instapaperUsername">Email</label>
+            <input
+              type="text"
+              id="instapaperUsername"
+              name="instapaperUsername"
+              class="form-input"
+              placeholder="you@example.com"
+              autocomplete="email"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="instapaperPassword">Password</label>
+            <div class="form-hint">Leave blank if you haven't set a password.</div>
+            <input
+              type="password"
+              id="instapaperPassword"
+              name="instapaperPassword"
+              class="form-input"
+              placeholder="Optional"
+              autocomplete="current-password"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Todoist</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="todoistEnabled" name="todoistEnabled">
+              <span>Enable Todoist</span>
+            </label>
+          </div>
+          <div class="form-group form-group-inline" id="todoistCheckedByDefaultGroup" style="margin-left: 28px; transition: opacity 0.2s ease;">
+            <label class="toggle-label">
+              <input type="checkbox" id="todoistCheckedByDefault" name="todoistCheckedByDefault">
+              <span>Checked by default in popup</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="todoistApiToken">API Token</label>
+            <div class="form-hint">
+              Get your token from <a href="https://todoist.com/app/settings/integrations/developer" target="_blank">Todoist Settings</a>
+            </div>
+            <input
+              type="password"
+              id="todoistApiToken"
+              name="todoistApiToken"
+              class="form-input mono"
+              placeholder="Your Todoist API token"
+              autocomplete="off"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Things</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="thingsEnabled" name="thingsEnabled">
+              <span>Enable Things</span>
+            </label>
+          </div>
+          <div class="form-group form-group-inline" id="thingsCheckedByDefaultGroup" style="margin-left: 28px; transition: opacity 0.2s ease;">
+            <label class="toggle-label">
+              <input type="checkbox" id="thingsCheckedByDefault" name="thingsCheckedByDefault">
+              <span>Checked by default in popup</span>
+            </label>
+          </div>
+          <div class="form-hint">
+            Add bookmarks as to-dos in the Things app (macOS/iOS). The option only appears in the popup when you're on a Mac or iOS device.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Readwise</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="readwiseEnabled" name="readwiseEnabled">
+              <span>Enable Readwise</span>
+            </label>
+          </div>
+          <div class="form-group form-group-inline" id="readwiseCheckedByDefaultGroup" style="margin-left: 28px; transition: opacity 0.2s ease;">
+            <label class="toggle-label">
+              <input type="checkbox" id="readwiseCheckedByDefault" name="readwiseCheckedByDefault">
+              <span>Checked by default in popup</span>
+            </label>
+          </div>
+          <div class="form-hint" style="margin-bottom: 16px;">
+            Save bookmarks to Readwise Reader. Get your access token from
+            <a href="https://readwise.io/access_token" target="_blank">readwise.io/access_token</a>.
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="readwiseAccessToken">Access Token</label>
+            <input
+              type="password"
+              id="readwiseAccessToken"
+              name="readwiseAccessToken"
+              class="form-input mono"
+              placeholder="Your Readwise access token"
+              autocomplete="off"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Raindrop.io</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="raindropEnabled" name="raindropEnabled">
+              <span>Enable Raindrop.io</span>
+            </label>
+          </div>
+          <div class="form-group form-group-inline" id="raindropCheckedByDefaultGroup" style="margin-left: 28px; transition: opacity 0.2s ease;">
+            <label class="toggle-label">
+              <input type="checkbox" id="raindropCheckedByDefault" name="raindropCheckedByDefault">
+              <span>Checked by default in popup</span>
+            </label>
+          </div>
+          <div class="form-hint" style="margin-bottom: 16px;">
+            Save bookmarks to Raindrop.io with AI-generated tags. Create a test token at
+            <a href="https://app.raindrop.io/settings/integrations" target="_blank">Raindrop.io Integrations</a>.
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="raindropAccessToken">Access Token</label>
+            <input
+              type="password"
+              id="raindropAccessToken"
+              name="raindropAccessToken"
+              class="form-input mono"
+              placeholder="Your Raindrop.io access token"
+              autocomplete="off"
+            >
+          </div>
+        </div>
+      </div>
+
+      </div>
+      <div id="section-rules" class="settings-section">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Domain Rules</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-hint" style="margin-bottom: 16px;">
+            Automatically save bookmarks from specific domains to a folder, skipping AI analysis.
+            Use <code>github.com</code> to match all pages, or <code>youtube.com/watch</code> to match by path prefix.
+          </div>
+          <div id="domainRulesList" style="margin-bottom: 12px;"></div>
+          <div style="display: flex; gap: 8px; align-items: flex-end;">
+            <div style="flex: 1;">
+              <label class="form-label" for="newRuleDomain">Domain</label>
+              <input type="text" id="newRuleDomain" class="form-input" placeholder="github.com">
+            </div>
+            <div style="flex: 1;">
+              <label class="form-label" for="newRuleFolder">Folder</label>
+              <input type="text" id="newRuleFolder" class="form-input" placeholder="Development/GitHub" list="ruleFolderSuggestions" autocomplete="off">
+              <datalist id="ruleFolderSuggestions"></datalist>
+            </div>
+            <button type="button" class="btn-load" id="addRuleBtn" style="margin-bottom: 0;">Add</button>
+          </div>
+        </div>
+      </div>
+
+      </div>
+      <div id="section-folders" class="settings-section">
+        <div class="header">
+          <h1>Sorting Preferences</h1>
+          <p>Configure how bookmarks in "To Sort" (Inbox) are analyzed, batched, and organized into folders.</p>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Sorting preferences</span>
+            <span class="badge optional">Optional</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="sortBatchSize">Maximum bookmarks per batch</label>
+              <div class="form-hint">Number of bookmarks analyzed in a single AI prompt (default: 100, min: 5, max: 100).</div>
+              <input type="number" id="sortBatchSize" name="sortBatchSize" class="form-input" min="5" max="100" step="1" value="100">
+            </div>
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="sortBatchConcurrency">Number of parallel batches (concurrency)</label>
+              <div class="form-hint">How many batch requests to run simultaneously in parallel (default: 4, min: 1, max: 10). Higher values process faster.</div>
+              <input type="number" id="sortBatchConcurrency" name="sortBatchConcurrency" class="form-input" min="1" max="10" step="1" value="4">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="section-health" class="settings-section">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Automatic Health Checks</span>
+            <span class="badge optional">Optional</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group form-group-inline">
+              <label class="toggle-label">
+                <input type="checkbox" id="healthCheckEnabled" name="healthCheckEnabled">
+                <span>Enable automatic checks</span>
+              </label>
+            </div>
+            <div class="form-hint" style="margin-bottom:20px">
+              Runs a health check in the background on the selected schedule. Results appear in the Health Check page.
+            </div>
+
+            <div class="form-group" id="intervalGroup">
+              <label class="form-label">Frequency</label>
+              <div class="interval-tabs">
+                <button type="button" class="interval-tab active" data-interval="weekly">Weekly</button>
+                <button type="button" class="interval-tab" data-interval="daily">Daily</button>
+                <button type="button" class="interval-tab" data-interval="monthly">Monthly</button>
+              </div>
+            </div>
+
+            <div class="form-group" id="staleGroup">
+              <label class="form-label">Mark bookmarks as stale after</label>
+              <div class="stale-row">
+                <input type="number" id="healthCheckStaleDays" name="healthCheckStaleDays" class="stale-input" min="30" max="3650" value="365">
+                <span class="stale-unit">days without being opened</span>
+              </div>
+              <div class="form-hint" style="margin-top:6px">
+                Chrome tracks when bookmarks were last visited. Bookmarks older than this threshold are flagged as stale.
+              </div>
+            </div>
+
+            <div class="form-group" id="checkTypesGroup">
+              <label class="form-label">Which checks to run</label>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+                <label class="toggle-label">
+                  <input type="checkbox" id="checkDead" name="checkDead">
+                  <span>Dead links & unreachable domains</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="checkRedirects" name="checkRedirects">
+                  <span>Redirects</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="checkStale" name="checkStale">
+                  <span>Stale bookmarks</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="toggle-label">
+                <input type="checkbox" id="healthCheckRunOnOpen" name="healthCheckRunOnOpen">
+                <span>If Chrome was closed at scheduled time, run check on next launch</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Manual Health Check</span>
+            <span class="badge optional">Tool</span>
+          </div>
+          <div class="card-body">
+            <p class="form-hint" style="margin-bottom:12px">
+              Scan your bookmarks for dead links, redirects, stale content, and disappeared domains manually.
+            </p>
+            <a href="health-check.html" class="btn btn-secondary" style="display:inline-block;text-decoration:none;margin-right:8px">
+              Open Health Check
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top: 24px; margin-bottom: 12px; display: flex; gap: 12px; align-items: center;">
+        <button type="submit" class="btn btn-primary" id="saveSettingsBtn" style="padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 6px; background-color: #1a73e8; color: white; border: none;">Save Settings</button>
+      </div>
+
+      <div class="status" id="status"></div>
+    </form>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
