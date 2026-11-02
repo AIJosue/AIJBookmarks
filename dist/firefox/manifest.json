@@ -6,7 +6,15 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "aijbookmarks@AIJosue",
-      "strict_min_version": "109.0"
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
     }
   },
   "permissions": [
@@ -14,8 +22,10 @@
     "tabs",
     "activeTab",
     "storage",
+    "unlimitedStorage",
     "contextMenus",
-    "alarms"
+    "alarms",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "https://api.anthropic.com/*",
@@ -24,6 +34,9 @@
     "https://aiplatform.googleapis.com/*",
     "https://www.instapaper.com/*",
     "https://api.todoist.com/*",
+    "https://huggingface.co/*",
+    "https://*.huggingface.co/*",
+    "https://*.hf.co/*",
     "https://*/*",
     "http://*/*"
   ],
@@ -39,6 +52,8 @@
   },
   "background": {
     "scripts": [
+      "model-manager.js",
+      "embedding-engine.js",
       "background.js"
     ]
   },

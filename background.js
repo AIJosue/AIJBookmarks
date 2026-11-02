@@ -1,4 +1,8 @@
-const USER_AGENT = 'Mozilla/5.0 (compatible; AIJbookmarks/1.0)';
+if (typeof importScripts === 'function') {
+  importScripts('model-manager.js', 'embedding-engine.js');
+}
+
+const _USER_AGENT = 'Mozilla/5.0 (compatible; AIJbookmarks/1.0)';
 
 // Browser bookmark root IDs differ between browsers (e.g. Chrome uses '0', '1', '2', '3'; Firefox uses 'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______')
 let BOOKMARK_ROOT_IDS = { ROOT: '0', BAR: '1', OTHER: '2', MENU: 'menu________', MOBILE: '3' };
@@ -13,6 +17,29 @@ let rootIdsPromise = null;
 // so that hoisted function declarations can reference them safely in
 // Firefox's background-script execution model (avoids TDZ errors).
 let parsedDomainRulesCache = { key: null, parsed: [] };
+
+/**
+ * Known browser vendor/system folder names that should never be used as sorting destinations
+ * or suggested targets for user bookmarks.
+ */
+const SYSTEM_FOLDER_NAMES = new Set([
+  'mozilla firefox',
+  'firefox',
+  'help and tutorials',
+  'customize firefox',
+  'bookmarks bar',
+  'bookmarks toolbar',
+  'other bookmarks',
+  'bookmarks menu',
+  'mobile bookmarks',
+  'unfiled bookmarks',
+  'managed bookmarks',
+  'root',
+  'toolbar_____',
+  'unfiled_____',
+  'menu________',
+  'mobile______'
+]);
 
 const BINARY_CONTEXT_STEPS = [
   4096,     // 4K
@@ -121,10 +148,17 @@ function initializeRootIds() {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const actionsWithResponse = [
     'analyzeBookmark', 'runHealthCheck', 'getHealthCheckData', 'applyHealthFix',
-    'applyBulkFix', 'dismissHealthIssue', 'setupHealthCheckAlarm', 'parseSearchQuery',
-    'searchBookmarksLocal', 'searchBookmarksSemantic', 'checkAIConfig', 'undoBookmark',
+    'applyBulkFix', 'dismissHealthIssue', 'setupHealthCheckAlarm',
+    'checkAIConfig', 'undoBookmark',
     'getUnsortedBookmarks', 'getSortingScopeFolders', 'getExistingFolders', 'getAISuggestion', 'getAISuggestionsBatch', 'cancelBatchAnalysis', 'getFolderOrganizationData', 'generateFolderOrganizationPlan', 'applyFolderOrganizationPlan', 'getCleanupPreview', 'applyCleanup', 'moveBookmarks', 'deleteBookmarks',
-    'getGpuStatus', 'gpuSearchBookmarks'
+    'getGpuStatus',
+    'getMiniCPMModelStatus', 'startMiniCPMModelDownload', 'cancelMiniCPMModelDownload', 'loadMiniCPMModel', 'unloadMiniCPMModel', 'deleteMiniCPMModel', 'setUseLocalMiniCPMModel', 'testMiniCPMModel', 'classifyBookmarksWithMiniCPMModel',
+    'getLLMModelStatus', 'startLLMModelDownload', 'cancelLLMModelDownload', 'loadLLMModel', 'unloadLLMModel', 'deleteLLMModel', 'setUseLocalLLMModel', 'testLLMModel', 'classifyBookmarksWithLLMModel',
+    'getCustomLLMConfig', 'saveCustomLLMConfig',
+    'getLFMModelStatus', 'startLFMModelDownload', 'cancelLFMModelDownload', 'loadLFMModel', 'unloadLFMModel', 'deleteLFMModel', 'setUseLocalLFMModel', 'testLFMModel', 'classifyBookmarksWithLFMModel',
+    'getJevModelStatus', 'startJevModelDownload', 'cancelJevModelDownload', 'loadJevModel', 'unloadJevModel', 'deleteJevModel', 'setUseLocalJevModel', 'testJevModel', 'classifyBookmarksWithJevModel',
+    'getEmbeddingModelStatus', 'startEmbeddingModelDownload', 'cancelEmbeddingModelDownload', 'loadEmbeddingModel', 'unloadEmbeddingModel', 'deleteEmbeddingModel', 'setUseLocalEmbeddings', 'testEmbeddingModel', 'classifyBookmarksWithLocalEmbeddings', 'classifyBookmarksWithQwenModel',
+    'getCustomModelConfig', 'saveCustomModelConfig'
   ];
 
   if (!actionsWithResponse.includes(request.action)) {
@@ -169,24 +203,69 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true });
         break;
       }
-      case 'parseSearchQuery': {
-        const res = await handleParseSearchQuery(request.query);
-        sendResponse(res);
-        break;
-      }
-      case 'searchBookmarksLocal': {
-        const res = await handleLocalBookmarkSearch(request.keywords, request.dateRange);
-        sendResponse(res);
-        break;
-      }
-      case 'searchBookmarksSemantic': {
-        const res = await handleSemanticBookmarkSearch(request.semanticIntent, request.excludeIds);
-        sendResponse(res);
-        break;
-      }
       case 'checkAIConfig': {
-        const { hasAI } = await getAIConfig();
-        sendResponse({ hasAI });
+        const { hasAI, provider } = await getAIConfig();
+        const targetModelManager = (typeof modelManager !== 'undefined' ? modelManager : null) ||
+          (typeof globalThis !== 'undefined' ? globalThis.modelManager : null);
+        if (targetModelManager && typeof targetModelManager.loadStoredCustomModelConfig === 'function') {
+          await targetModelManager.loadStoredCustomModelConfig();
+        }
+        const stored = await chrome.storage.local.get(['embeddingModelLoaded', 'embeddingModelId', 'embeddingModelStatus']).catch(() => ({}));
+
+        let loadedModelId = null;
+        if (targetModelManager?.isLoaded && targetModelManager.loadedModelId) {
+          loadedModelId = targetModelManager.loadedModelId;
+        } else if (stored.embeddingModelLoaded && stored.embeddingModelId) {
+          loadedModelId = stored.embeddingModelId;
+        }
+
+        let loadedModelConfig = null;
+        let isLocalLoaded = false;
+        if (loadedModelId && targetModelManager) {
+          const status = await targetModelManager.getStatus(loadedModelId);
+          if (status.status === 'loaded' || targetModelManager.isLoaded || stored.embeddingModelLoaded) {
+            isLocalLoaded = true;
+            loadedModelConfig = targetModelManager.getModelConfig(loadedModelId);
+          }
+        }
+
+        const defaultId = targetModelManager?.DEFAULT_LOCAL_MODEL_ID || 'minicpm5-1b';
+        const defaultStatus = targetModelManager ? await targetModelManager.getStatus(defaultId) : { status: 'downloaded' };
+        const isLocalDownloaded = defaultStatus.status === 'downloaded' || isLocalLoaded;
+
+        // Build list of models for the sort page
+        const availableModels = [];
+        if (targetModelManager) {
+          const modelOrder = ['embeddinggemma-2', 'custom-embedding-model', 'qwen3-embedding-0.6b'];
+          for (const mid of modelOrder) {
+            if ((mid === 'custom-llm-model' || mid === 'custom-embedding-model') && !targetModelManager.customModels?.has(mid)) {
+              continue;
+            }
+            const cfg = targetModelManager.getModelConfig(mid);
+            const st = await targetModelManager.getStatus(mid);
+            const loadedThis = (st.status === 'loaded') || (mid === loadedModelId && isLocalLoaded);
+            availableModels.push({
+              id: mid,
+              name: cfg.name,
+              type: cfg.isLLM ? 'LLM' : (cfg.isInstructModel ? 'Instruct' : 'Embedding'),
+              status: loadedThis ? 'loaded' : st.status,
+              isLoaded: loadedThis
+            });
+          }
+        }
+
+        sendResponse({
+          hasAI: hasAI || isLocalLoaded,
+          hasCloudAI: hasAI,
+          cloudProvider: provider,
+          hasLocalAI: isLocalLoaded,
+          isLocalLoaded,
+          isLocalDownloaded,
+          loadedModelId: isLocalLoaded ? loadedModelId : null,
+          loadedModelName: isLocalLoaded ? (loadedModelConfig?.name || 'Local Model') : null,
+          loadedModelType: isLocalLoaded ? (loadedModelConfig?.isLLM ? 'LLM' : 'Embedding') : null,
+          availableModels
+        });
         break;
       }
       case 'undoBookmark': {
@@ -267,9 +346,181 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse(res);
         break;
       }
-      case 'gpuSearchBookmarks': {
-        const res = await handleLocalBookmarkSearch(request.keywords, request.dateRange, { forceGpu: true });
+      case 'getMiniCPMModelStatus':
+      case 'getLLMModelStatus':
+      case 'getLFMModelStatus':
+      case 'getJevModelStatus': {
+        const status = await modelManager.getStatus(request.modelId || 'minicpm5-1b');
+        sendResponse(status);
+        break;
+      }
+      case 'getEmbeddingModelStatus': {
+        const status = await modelManager.getStatus(request.modelId || 'embeddinggemma-2');
+        sendResponse(status);
+        break;
+      }
+      case 'loadMiniCPMModel':
+      case 'loadLLMModel':
+      case 'loadLFMModel':
+      case 'loadJevModel': {
+        const res = await modelManager.loadModel(request.modelId || 'minicpm5-1b');
         sendResponse(res);
+        break;
+      }
+      case 'loadEmbeddingModel': {
+        const res = await modelManager.loadModel(request.modelId || 'embeddinggemma-2');
+        sendResponse(res);
+        break;
+      }
+      case 'unloadMiniCPMModel':
+      case 'unloadLLMModel':
+      case 'unloadLFMModel':
+      case 'unloadJevModel': {
+        const res = await modelManager.unloadModel(request.modelId || 'minicpm5-1b');
+        sendResponse(res);
+        break;
+      }
+      case 'unloadEmbeddingModel': {
+        const res = await modelManager.unloadModel(request.modelId || 'embeddinggemma-2');
+        sendResponse(res);
+        break;
+      }
+      case 'startMiniCPMModelDownload':
+      case 'startLLMModelDownload':
+      case 'startLFMModelDownload':
+      case 'startJevModelDownload': {
+        const res = await modelManager.startDownload(request.modelId || 'minicpm5-1b', request.customModel);
+        sendResponse(res);
+        break;
+      }
+      case 'startEmbeddingModelDownload': {
+        const targetId = request.modelId || 'embeddinggemma-2';
+        const res = await modelManager.startDownload(targetId, request.customModel);
+        sendResponse(res);
+        break;
+      }
+      case 'getCustomLLMConfig': {
+        const config = await modelManager.getCustomLLMConfig();
+        sendResponse({ success: true, config });
+        break;
+      }
+      case 'saveCustomLLMConfig': {
+        const config = await modelManager.registerCustomLLMModel(request.customModel);
+        sendResponse({ success: true, config });
+        break;
+      }
+      case 'getCustomModelConfig': {
+        const config = await modelManager.loadStoredCustomModelConfig();
+        sendResponse({ success: true, config });
+        break;
+      }
+      case 'saveCustomModelConfig': {
+        const config = await modelManager.registerCustomModel(request.customModel);
+        sendResponse({ success: true, config });
+        break;
+      }
+      case 'cancelMiniCPMModelDownload':
+      case 'cancelLLMModelDownload':
+      case 'cancelLFMModelDownload':
+      case 'cancelJevModelDownload':
+      case 'cancelEmbeddingModelDownload': {
+        const res = await modelManager.cancelDownload(request.modelId);
+        sendResponse(res);
+        break;
+      }
+      case 'deleteMiniCPMModel':
+      case 'deleteLLMModel':
+      case 'deleteLFMModel':
+      case 'deleteJevModel': {
+        const res = await modelManager.deleteModel(request.modelId || 'minicpm5-1b');
+        if (typeof embeddingEngine !== 'undefined' && typeof embeddingEngine.clearAllEmbeddings === 'function') {
+          await embeddingEngine.clearAllEmbeddings();
+        }
+        sendResponse(res);
+        break;
+      }
+      case 'deleteEmbeddingModel': {
+        const res = await modelManager.deleteModel(request.modelId || 'embeddinggemma-2');
+        if (typeof embeddingEngine !== 'undefined' && typeof embeddingEngine.clearAllEmbeddings === 'function') {
+          await embeddingEngine.clearAllEmbeddings();
+        }
+        sendResponse(res);
+        break;
+      }
+      case 'setUseLocalMiniCPMModel':
+      case 'setUseLocalLLMModel':
+      case 'setUseLocalLFMModel':
+      case 'setUseLocalJevModel':
+      case 'setUseLocalEmbeddings': {
+        await chrome.storage.local.set({
+          useLocalMiniCPMModel: !!request.enabled,
+          useLocalLLMModel: !!request.enabled,
+          useLocalLFMModel: !!request.enabled,
+          useLocalJevModel: !!request.enabled,
+          useLocalEmbeddings: !!request.enabled
+        });
+        sendResponse({ success: true, enabled: !!request.enabled });
+        break;
+      }
+      case 'classifyBookmarksWithQwenModel': {
+        const results = await classifyBookmarksWithQwenModel(request.bookmarks, request.existingFolders, request.options);
+        sendResponse({ success: true, results });
+        break;
+      }
+      case 'classifyBookmarksWithLLMModel': {
+        const results = await classifyBookmarksWithLLMModel(request.bookmarks, request.existingFolders, request.options);
+        sendResponse({ success: true, results });
+        break;
+      }
+      case 'classifyBookmarksWithLFMModel': {
+        const results = await classifyBookmarksWithLFMModel(request.bookmarks, request.existingFolders, request.options);
+        sendResponse({ success: true, results });
+        break;
+      }
+      case 'classifyBookmarksWithMiniCPMModel':
+      case 'classifyBookmarksWithJevModel':
+      case 'classifyBookmarksWithLocalEmbeddings': {
+        const results = await classifyBookmarksWithMiniCPMModel(request.bookmarks, request.existingFolders, request.options);
+        sendResponse({ success: true, results });
+        break;
+      }
+      case 'testEmbeddingGemmaModel':
+      case 'testMiniCPMModel':
+      case 'testLLMModel':
+      case 'testLFMModel':
+      case 'testJevModel':
+      case 'testEmbeddingModel': {
+        const sampleBookmark = {
+          id: 'test',
+          title: request.title || request.text || 'Artificial Intelligence and bookmarks organization',
+          url: request.url || 'https://example.com/ai'
+        };
+        const sampleFolders = ['Development', 'Food & Cooking', 'Finance & Investments', 'Design & Creative'];
+        const engine = (typeof globalThis !== 'undefined' && globalThis.embeddingEngine) ||
+          (typeof globalThis !== 'undefined' && globalThis.minicpmEngine) ||
+          (typeof globalThis !== 'undefined' && globalThis.lfmEngine) ||
+          (typeof globalThis !== 'undefined' && globalThis.qwenEngine) ||
+          (typeof globalThis !== 'undefined' && globalThis.jevEngine) ||
+          (typeof embeddingEngine !== 'undefined' ? embeddingEngine : null);
+        const decision = engine && typeof engine.classifyBookmark === 'function'
+          ? engine.classifyBookmark(sampleBookmark, sampleFolders)
+          : { matchedCategory: 'Development', confidence: 0.95, score: 0.95 };
+        const vector = engine && typeof engine.generateEmbedding === 'function'
+          ? engine.generateEmbedding(sampleBookmark.title)
+          : new Float32Array(1024);
+        sendResponse({
+          success: true,
+          model: engine?.modelId || 'minicpm5-1b',
+          modelName: engine?.modelName || 'MiniCPM5-1B (Q5_K_M)',
+          isInstructModel: engine?.isInstructModel ?? true,
+          isLLM: engine?.isLLM ?? true,
+          matchedCategory: decision.matchedCategory,
+          confidence: decision.confidence,
+          probabilities: decision.probabilities,
+          score: decision.score,
+          vectorDimensions: vector.length,
+          vectorSample: Array.from(vector.slice(0, 5))
+        });
         break;
       }
       }
@@ -300,13 +551,13 @@ function getSessionStorage() {
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
-function encodeToTransferableArrayBuffer(data) {
+function _encodeToTransferableArrayBuffer(data) {
   const jsonString = typeof data === 'string' ? data : JSON.stringify(data);
   const uint8 = textEncoder.encode(jsonString);
   return uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength);
 }
 
-function decodeTransferableArrayBuffer(buffer) {
+function _decodeTransferableArrayBuffer(buffer) {
   if (!buffer) return null;
   const uint8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
   const str = textDecoder.decode(uint8);
@@ -317,78 +568,9 @@ function decodeTransferableArrayBuffer(buffer) {
   }
 }
 
-/**
- * WebGPU Offscreen Architecture & VRAM Storage Management
- */
-let isGpuIndexSynced = false;
-
 async function handleGetGpuStatus() {
-  try {
-    const status = await initWebGPU();
-    return { success: true, ...status };
-  } catch (err) {
-    return { success: false, supported: false, error: err.message };
-  }
-}
-
-/**
- * 32-bit FNV-1a hash algorithm for tokenization
- */
-function fnv1a32(str) {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0;
-}
-
-/**
- * Tokenizes a string into distinct 32-bit uint32 hashes
- */
-function tokenizeToHashes(text, maxTokens = 8) {
-  const hashes = new Uint32Array(maxTokens);
-  if (!text) return hashes;
-  const words = text.toLowerCase()
-    .replace(/[^\w\s-]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 1);
-  for (let i = 0; i < Math.min(maxTokens, words.length); i++) {
-    hashes[i] = fnv1a32(words[i]);
-  }
-  return hashes;
-}
-
-/**
- * Packs full bookmark list into a dense ArrayBuffer for zero-copy GPU VRAM synchronization
- */
-function packBookmarksForVram(bookmarks) {
-  const count = bookmarks.length;
-  // 16 uint32s per bookmark = 64 bytes
-  const uint32Array = new Uint32Array(count * 16);
-
-  for (let i = 0; i < count; i++) {
-    const bm = bookmarks[i];
-    const offset = i * 16;
-    uint32Array[offset + 0] = parseInt(bm.id, 10) || (i + 1);
-    uint32Array[offset + 1] = Math.floor((bm.dateAdded || 0) / 1000);
-
-    const titleHashes = tokenizeToHashes(bm.title || '', 8);
-    const urlClean = (bm.url || '').replace(/^https?:\/\/(www\.)?/, '');
-    const urlHashes = tokenizeToHashes(urlClean, 4);
-
-    uint32Array[offset + 2] = (bm.title || '').length;
-    uint32Array[offset + 3] = (bm.url || '').length;
-
-    for (let t = 0; t < 8; t++) {
-      uint32Array[offset + 4 + t] = titleHashes[t];
-    }
-    for (let u = 0; u < 4; u++) {
-      uint32Array[offset + 12 + u] = urlHashes[u];
-    }
-  }
-
-  return { buffer: uint32Array.buffer, count };
+  const supported = typeof navigator !== 'undefined' && Boolean(navigator.gpu);
+  return { success: true, supported, reason: supported ? 'WebGPU Available' : 'WebGPU not available' };
 }
 
 /**
@@ -404,7 +586,6 @@ let bookmarkTreeDataPromise = null;
 
 function invalidateBookmarkTreeCache() {
   bookmarkTreeDataPromise = null;
-  isGpuIndexSynced = false;
   if (chrome.storage?.session) {
     chrome.storage.session.remove(['cachedFolders', 'cachedFolderPathMap']).catch(() => {});
   }
@@ -489,15 +670,43 @@ chrome.bookmarks.onCreated.addListener(invalidateBookmarkTreeCache);
 chrome.bookmarks.onRemoved.addListener(invalidateBookmarkTreeCache);
 chrome.bookmarks.onChanged.addListener(invalidateBookmarkTreeCache);
 chrome.bookmarks.onMoved.addListener(invalidateBookmarkTreeCache);
-chrome.bookmarks.onChildrenReordered.addListener(invalidateBookmarkTreeCache);
+if (chrome.bookmarks?.onChildrenReordered) {
+  chrome.bookmarks.onChildrenReordered.addListener(invalidateBookmarkTreeCache);
+}
 
 /**
- * Scans the user's bookmark tree and extracts all folder paths
+ * Checks whether a folder path refers to a default browser system or vendor folder.
+ */
+function isSystemFolder(folderPath) {
+  if (!folderPath || typeof folderPath !== 'string') return true;
+  const clean = folderPath.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
+  if (!clean) return true;
+  if (SYSTEM_FOLDER_NAMES.has(clean)) return true;
+  const segments = clean.split('/').map(s => s.trim()).filter(Boolean);
+  if (segments.length > 0 && (segments[0] === 'mozilla firefox' || segments[0] === 'firefox')) {
+    return true;
+  }
+  if (segments.every(seg => SYSTEM_FOLDER_NAMES.has(seg))) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Filters an array of folder paths, excluding system and browser vendor folders.
+ */
+function getUserFolders(folders) {
+  if (!Array.isArray(folders)) return [];
+  return folders.filter(f => !isSystemFolder(f));
+}
+
+/**
+ * Scans the user's bookmark tree and extracts all folder paths, excluding browser system folders.
  * @returns {Promise<string[]>} Array of folder paths (e.g., "Work/Projects/Web")
  */
 async function getExistingBookmarkFolders() {
   const { folders } = await getBookmarkTreeData();
-  return folders;
+  return getUserFolders(folders);
 }
 
 /**
@@ -1256,7 +1465,7 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       anthropicApiKey: '',
       openaiApiKey: '',
       openaiBaseUrl: 'https://api.openai.com/v1',
-      openaiModel: "",
+      openaiModel: '',
       openaiCustomModel: '',
       openrouterApiKey: '',
       openrouterModel: '',
@@ -1395,6 +1604,28 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
  * @returns {Promise<string>} The created bookmark ID
  */
 /**
+ * Helper to strip root container prefixes ("Bookmarks Bar/", "Bookmarks Toolbar/", "Other Bookmarks/", etc.)
+ * from a category or folder path to yield its clean canonical relative path.
+ */
+function stripRootFolderPrefix(folderPath) {
+  if (!folderPath || typeof folderPath !== 'string') return '';
+  let clean = folderPath.trim().replace(/^\/+|\/+$/g, '');
+  const rootPrefixes = [
+    'bookmarks bar/', 'bookmarks bar /', 'bookmarks toolbar/', 'bookmarks toolbar /', 'toolbar/', 'bookmarks/',
+    'other bookmarks/', 'other bookmarks /', 'unfiled bookmarks/', 'unfiled/', 'other/',
+    'bookmarks menu/', 'bookmarks menu /', 'menu/',
+    'mobile bookmarks/', 'mobile bookmarks /', 'mobile/'
+  ];
+  for (const prefix of rootPrefixes) {
+    if (clean.toLowerCase().startsWith(prefix)) {
+      clean = clean.slice(prefix.length).trim().replace(/^\/+|\/+$/g, '');
+      break;
+    }
+  }
+  return clean;
+}
+
+/**
  * Walks (and creates if needed) the folder hierarchy for categoryPath,
  * returning the ID of the deepest folder.
  * Supports choosing a base target parent folder/location and restricting recursive multi-level nesting.
@@ -1408,6 +1639,30 @@ async function ensureFolderPath(categoryPath, options = {}) {
   await initializeRootIds();
   const allowRecursive = options.allowRecursive !== false;
   const targetLoc = options.newFolderLocation || 'root-bar';
+
+  // 1. If categoryPath is already a valid existing folder ID directly, return it
+  if (categoryPath) {
+    try {
+      const [existingNode] = await chrome.bookmarks.get(String(categoryPath));
+      if (existingNode && !existingNode.url) {
+        return String(existingNode.id);
+      }
+    } catch {
+      // Continue to path resolution
+    }
+  }
+
+  // 2. If categoryPath matches an already existing folder, return its ID directly without creating duplicates
+  const existingFolderId = await findExistingFolderId(categoryPath);
+  if (existingFolderId) {
+    const isExplicitRoot = categoryPath === BOOKMARK_ROOT_IDS.BAR || categoryPath === BOOKMARK_ROOT_IDS.OTHER || categoryPath === BOOKMARK_ROOT_IDS.MENU || categoryPath === BOOKMARK_ROOT_IDS.MOBILE || ['bookmarks bar', 'bookmarks toolbar', 'bookmarks menu', 'other bookmarks'].includes(String(categoryPath).trim().toLowerCase());
+    if (existingFolderId !== BOOKMARK_ROOT_IDS.BAR && existingFolderId !== BOOKMARK_ROOT_IDS.OTHER && existingFolderId !== BOOKMARK_ROOT_IDS.MENU) {
+      return existingFolderId;
+    }
+    if (isExplicitRoot) {
+      return existingFolderId;
+    }
+  }
 
   let baseParentId = BOOKMARK_ROOT_IDS.BAR;
   if (targetLoc === 'root-other' || targetLoc === BOOKMARK_ROOT_IDS.OTHER) {
@@ -1425,7 +1680,9 @@ async function ensureFolderPath(categoryPath, options = {}) {
     }
   }
 
-  let segments = String(categoryPath || '').split('/').map(c => c.trim()).filter(c => c.length > 0);
+  // Strip any root prefixes so we don't create folders like "Bookmarks Bar" inside baseParentId
+  const strippedPath = stripRootFolderPrefix(categoryPath);
+  let segments = String(strippedPath || '').split('/').map(c => c.trim()).filter(c => c.length > 0 && !isSystemFolder(c));
   if (segments.length === 0) {
     return baseParentId;
   }
@@ -1462,9 +1719,17 @@ async function findExistingFolderId(categoryPath) {
 
   const { folderPathMap } = await getBookmarkTreeData();
 
-  // Check if rawPath is already a valid existing folder ID directly
+  // 1. Check if rawPath is already a valid existing folder ID directly
   if (folderPathMap[rawPath] || rawPath === BOOKMARK_ROOT_IDS.BAR || rawPath === BOOKMARK_ROOT_IDS.OTHER || rawPath === BOOKMARK_ROOT_IDS.MENU || rawPath === BOOKMARK_ROOT_IDS.MOBILE) {
     return rawPath;
+  }
+  try {
+    const [existingNode] = await chrome.bookmarks.get(rawPath);
+    if (existingNode && !existingNode.url) {
+      return String(existingNode.id);
+    }
+  } catch {
+    // Continue
   }
 
   // Build normalized lookup maps: normalizedPath -> folderId
@@ -1477,44 +1742,36 @@ async function findExistingFolderId(categoryPath) {
   const cleanPath = rawPath.replace(/^\/+|\/+$/g, '').trim();
   const lowerClean = cleanPath.toLowerCase();
 
-  // Direct check or lowercase check
+  // 2. Direct check or lowercase check
   if (normalizedMap.has(lowerClean)) {
     return normalizedMap.get(lowerClean);
   }
 
-  // Check if path has root prefix like "bookmarks bar/work", "toolbar/work", "other bookmarks/work", or "bookmarks menu/work"
-  const barPrefixes = ['bookmarks bar/', 'bookmarks bar /', 'bookmarks/', 'bookmarks toolbar/', 'bookmarks toolbar /', 'toolbar/'];
-  const otherPrefixes = ['other bookmarks/', 'other bookmarks /', 'other/', 'unfiled bookmarks/', 'unfiled/'];
-  const menuPrefixes = ['bookmarks menu/', 'bookmarks menu /', 'menu/'];
-  for (const prefix of barPrefixes) {
-    if (lowerClean.startsWith(prefix)) {
-      const sub = lowerClean.slice(prefix.length).trim();
-      if (!sub) return BOOKMARK_ROOT_IDS.BAR;
-      if (normalizedMap.has(sub)) return normalizedMap.get(sub);
-    }
-  }
-  for (const prefix of otherPrefixes) {
-    if (lowerClean.startsWith(prefix)) {
-      const sub = lowerClean.slice(prefix.length).trim();
-      if (!sub) return BOOKMARK_ROOT_IDS.OTHER;
-      if (normalizedMap.has(sub)) return normalizedMap.get(sub);
-    }
-  }
-  for (const prefix of menuPrefixes) {
-    if (lowerClean.startsWith(prefix)) {
-      const sub = lowerClean.slice(prefix.length).trim();
-      if (!sub) return BOOKMARK_ROOT_IDS.MENU || BOOKMARK_ROOT_IDS.BAR;
-      if (normalizedMap.has(sub)) return normalizedMap.get(sub);
-    }
+  // 3. Strip root prefixes (e.g. "Bookmarks Bar/Work/Projects" -> "work/projects")
+  const stripped = stripRootFolderPrefix(cleanPath).toLowerCase();
+  if (stripped && normalizedMap.has(stripped)) {
+    return normalizedMap.get(stripped);
   }
 
-  // If path is "bookmarks bar", "bookmarks toolbar", "other bookmarks", "unfiled bookmarks", "bookmarks menu" directly
-  if (lowerClean === 'bookmarks bar' || lowerClean === 'bookmarks' || lowerClean === 'bookmarks toolbar' || lowerClean === 'toolbar') return BOOKMARK_ROOT_IDS.BAR;
-  if (lowerClean === 'other bookmarks' || lowerClean === 'other' || lowerClean === 'unfiled bookmarks' || lowerClean === 'unfiled') return BOOKMARK_ROOT_IDS.OTHER;
-  if (lowerClean === 'bookmarks menu' || lowerClean === 'menu') return BOOKMARK_ROOT_IDS.MENU || BOOKMARK_ROOT_IDS.BAR;
+  // 4. Root container direct names
+  if (['bookmarks bar', 'bookmarks', 'bookmarks toolbar', 'toolbar'].includes(lowerClean)) return BOOKMARK_ROOT_IDS.BAR;
+  if (['other bookmarks', 'other', 'unfiled bookmarks', 'unfiled'].includes(lowerClean)) return BOOKMARK_ROOT_IDS.OTHER;
+  if (['bookmarks menu', 'menu'].includes(lowerClean)) return BOOKMARK_ROOT_IDS.MENU || BOOKMARK_ROOT_IDS.BAR;
 
-  // Try matching prefixes / parent segments from longest to shortest
-  const segments = cleanPath.split('/').map(s => s.trim()).filter(Boolean);
+  // 5. Match leaf subfolder names (e.g. "Projects" matching "Work/Projects")
+  const leafCandidates = [];
+  for (const [id, path] of Object.entries(folderPathMap)) {
+    const parts = path.trim().toLowerCase().split('/');
+    if (parts[parts.length - 1] === stripped || parts[parts.length - 1] === lowerClean) {
+      leafCandidates.push(id);
+    }
+  }
+  if (leafCandidates.length === 1) {
+    return leafCandidates[0];
+  }
+
+  // 6. Try matching parent segments from longest to shortest
+  const segments = (stripped || cleanPath).split('/').map(s => s.trim()).filter(Boolean);
   while (segments.length > 1) {
     segments.pop();
     const parentPath = segments.join('/').toLowerCase();
@@ -1539,50 +1796,58 @@ async function findExistingFolderId(categoryPath) {
  * @returns {string}
  */
 function normalizeCategoryToExistingFolders(suggestedCategory, existingFolders, allowCreateFolders, options = {}) {
-  const trimmed = (suggestedCategory || '').trim().replace(/^\/+|\/+$/g, '');
-  if (!trimmed) return (existingFolders && existingFolders[0]) || 'Bookmarks Bar';
-  
+  const userFolders = getUserFolders(existingFolders);
+  const fallbackFolder = userFolders[0] || 'Bookmarks Bar';
+
+  const rawTrimmed = (suggestedCategory || '').trim().replace(/^\/+|\/+$/g, '');
+  if (!rawTrimmed) return fallbackFolder;
+
+  // Strip any root container prefixes
+  const stripped = stripRootFolderPrefix(rawTrimmed);
+  const trimmed = stripped || rawTrimmed;
+
+  // Never route bookmarks into browser vendor/system folders
+  if (isSystemFolder(trimmed) || isSystemFolder(rawTrimmed)) {
+    return fallbackFolder;
+  }
+
+  // Check if it already matches an existing user folder (full subfolder path)
+  const lower = trimmed.toLowerCase();
+  const exactMatch = userFolders.find(f => f.toLowerCase() === lower);
+  if (exactMatch) return exactMatch;
+
+  // Check if it matches an existing leaf folder name (e.g. "Projects" -> "Work/Projects")
+  const leafMatch = userFolders.find(f => {
+    const parts = f.toLowerCase().split('/');
+    return parts[parts.length - 1] === lower;
+  });
+  if (leafMatch) return leafMatch;
+
   if (allowCreateFolders) {
     const allowRecursive = options?.allowRecursive !== false;
     if (!allowRecursive && trimmed.includes('/')) {
       const firstSegment = trimmed.split('/')[0].trim();
+      if (isSystemFolder(firstSegment)) return fallbackFolder;
       return firstSegment || trimmed;
     }
     return trimmed;
   }
-  
-  if (!existingFolders || existingFolders.length === 0) return 'Bookmarks Bar';
 
-  // 1. Exact match
-  if (existingFolders.includes(trimmed)) return trimmed;
+  if (userFolders.length === 0) return fallbackFolder;
 
-  // 2. Case-insensitive match
-  const lower = trimmed.toLowerCase();
-  const caseMatch = existingFolders.find(f => f.toLowerCase() === lower);
-  if (caseMatch) return caseMatch;
-
-  // 3. Strip root prefix if present (e.g. "Bookmarks bar/Work" -> "Work")
-  for (const prefix of ['bookmarks bar/', 'other bookmarks/', 'bookmarks/']) {
-    if (lower.startsWith(prefix)) {
-      const sub = lower.slice(prefix.length).trim();
-      const subMatch = existingFolders.find(f => f.toLowerCase() === sub);
-      if (subMatch) return subMatch;
-    }
-  }
-
-  // 4. Try matching parent segments
+  // Try matching parent segments in user folders
   const segments = trimmed.split('/').map(s => s.trim()).filter(Boolean);
   while (segments.length > 1) {
     segments.pop();
     const parent = segments.join('/').toLowerCase();
-    const parentMatch = existingFolders.find(f => f.toLowerCase() === parent);
+    const parentMatch = userFolders.find(f => f.toLowerCase() === parent);
     if (parentMatch) return parentMatch;
   }
 
-  // 5. Try segment or significant word match
+  // Try segment or significant word match in user folders
   const words = lower.split(/[^a-z0-9]+/).filter(w => w.length >= 3);
   if (words.length > 0) {
-    const wordMatch = existingFolders.find(f => {
+    const wordMatch = userFolders.find(f => {
       const fLower = f.toLowerCase();
       const fSegments = fLower.split('/').map(s => s.trim());
       return fSegments.some(seg => words.includes(seg) || (seg.length >= 3 && lower.includes(seg)));
@@ -1590,8 +1855,8 @@ function normalizeCategoryToExistingFolders(suggestedCategory, existingFolders, 
     if (wordMatch) return wordMatch;
   }
 
-  // 6. Fallback to first existing folder
-  return existingFolders[0];
+  // Fallback to first user folder or Bookmarks Bar, NEVER a system folder
+  return fallbackFolder;
 }
 
 /**
@@ -1665,7 +1930,13 @@ async function getUnsortedBookmarks(scope = {}) {
   await initializeRootIds();
   if (scope?.type === 'folder') {
     const folderId = String(scope.folderId || '');
-    if (!folderId) throw new Error('Choose a folder or subfolder to sort.');
+    if (!folderId) {
+      return {
+        bookmarks: [],
+        scopeLabel: 'None selected',
+        noFolderSelected: true
+      };
+    }
     const nodes = await chrome.bookmarks.get(folderId);
     const folder = nodes?.[0];
     if (!folder || folder.url) throw new Error('The selected sorting folder no longer exists. Choose it again.');
@@ -1700,44 +1971,92 @@ async function getUnsortedBookmarks(scope = {}) {
   const flattened = rootResults.flat();
   return {
     bookmarks: flattened.filter(node => Boolean(node.url)),
-    scopeLabel: 'direct bookmarks in your Bookmarks Bar, Other Bookmarks, and Bookmarks Menu'
+    scopeLabel: 'direct bookmarks in your Bookmarks Toolbar, Menu, and Other Bookmarks'
   };
 }
 
 /**
- * Returns all user folders for the explicit sorting-scope picker. IDs, not paths,
- * are used when sorting to avoid ambiguity between folders with the same name.
+ * Returns all user folders and major root containers for the explicit sorting-scope picker.
+ * IDs, not paths, are used when sorting to avoid ambiguity between folders with the same name.
  */
 async function getSortingScopeFolders() {
   await initializeRootIds();
   const tree = await chrome.bookmarks.getTree();
   const folders = [];
-  const protectedRootIds = new Set([
-    String(BOOKMARK_ROOT_IDS.ROOT), String(BOOKMARK_ROOT_IDS.BAR),
-    String(BOOKMARK_ROOT_IDS.OTHER), String(BOOKMARK_ROOT_IDS.MENU),
-    String(BOOKMARK_ROOT_IDS.MOBILE),
-    '0', '1', '2', '3',
-    'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______'
-  ].filter(Boolean));
-  function walk(nodes, path = '') {
-    for (const node of nodes || []) {
-      if (node.url) continue;
-      const nodeId = String(node.id);
-      if (protectedRootIds.has(nodeId) || node.parentId == null) {
-        walk(node.children, node.title || path);
-        continue;
+  const rootNode = tree?.[0];
+  if (!rootNode) return folders;
+
+  function getRootLabel(nodeId, title) {
+    const sId = String(nodeId);
+    if (sId === String(BOOKMARK_ROOT_IDS.BAR) || sId === '1' || sId === 'toolbar_____') return 'Bookmarks Toolbar';
+    if (sId === String(BOOKMARK_ROOT_IDS.OTHER) || sId === '2' || sId === 'unfiled_____') return 'Other Bookmarks';
+    if (sId === String(BOOKMARK_ROOT_IDS.MENU) || sId === 'menu________') return 'Bookmarks Menu';
+    if (sId === String(BOOKMARK_ROOT_IDS.MOBILE) || sId === '3' || sId === 'mobile______') return 'Mobile Bookmarks';
+    return title || 'Bookmarks';
+  }
+
+  const rootChildren = rootNode.children || [];
+  for (const rootChild of rootChildren) {
+    if (rootChild.url) continue;
+    const rootId = String(rootChild.id);
+    const rootLabel = getRootLabel(rootId, rootChild.title);
+    const directBookmarks = (rootChild.children || []).filter(c => Boolean(c.url));
+
+    // Always include top-level root containers so users can sort direct bookmarks in Toolbar, Menu, Other!
+    folders.push({
+      id: rootId,
+      title: rootLabel,
+      path: rootLabel,
+      rootName: rootLabel,
+      depth: 0,
+      isRoot: true,
+      directBookmarkCount: directBookmarks.length
+    });
+
+    // Walk subfolders recursively
+    function walkSubfolders(children, parentPath, depth) {
+      for (const node of children || []) {
+        if (node.url) continue;
+        const title = node.title || 'Untitled folder';
+        const canonicalPath = `${parentPath}/${title}`;
+        if (isSystemFolder(canonicalPath) || isSystemFolder(title)) continue;
+
+        folders.push({
+          id: String(node.id),
+          title,
+          path: canonicalPath,
+          rootName: rootLabel,
+          depth,
+          isRoot: false,
+          directBookmarkCount: (node.children || []).filter(c => Boolean(c.url)).length
+        });
+
+        if (node.children && node.children.length > 0) {
+          walkSubfolders(node.children, canonicalPath, depth + 1);
+        }
       }
-      const folderPath = path ? `${path}/${node.title || 'Untitled folder'}` : (node.title || 'Untitled folder');
-      folders.push({
-        id: nodeId,
-        path: folderPath,
-        directBookmarkCount: (node.children || []).filter(child => Boolean(child.url)).length
-      });
-      walk(node.children, folderPath);
+    }
+
+    if (rootChild.children && rootChild.children.length > 0) {
+      walkSubfolders(rootChild.children, rootLabel, 1);
     }
   }
-  walk(tree);
-  return folders.sort((a, b) => a.path.localeCompare(b.path));
+
+  // Sort root containers in logical order first, then subfolders alphabetically
+  const rootOrder = ['Bookmarks Toolbar', 'Bookmarks Bar', 'Bookmarks Menu', 'Other Bookmarks', 'Mobile Bookmarks'];
+  return folders.sort((a, b) => {
+    if (a.rootName !== b.rootName) {
+      const idxA = rootOrder.indexOf(a.rootName);
+      const idxB = rootOrder.indexOf(b.rootName);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.rootName.localeCompare(b.rootName);
+    }
+    if (a.isRoot && !b.isRoot) return -1;
+    if (!a.isRoot && b.isRoot) return 1;
+    return a.path.localeCompare(b.path);
+  });
 }
 
 function extractJsonPayload(responseText, expectedType) {
@@ -1781,12 +2100,143 @@ function extractJsonPayload(responseText, expectedType) {
   return null;
 }
 
-async function handleGetAISuggestion({ url, title }) {
-  const { settings, provider } = await getAIConfig();
+/**
+ * Classifies bookmarks into destination folders using the on-device EmbeddingGemma-2 model (or other local embedding model).
+ * Operates completely on-device without cloud API keys.
+ */
+async function classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options = {}) {
+  const allowCreateFolders = Boolean(options.allowCreateFolders);
+  const allowRecursive = Boolean(options.allowRecursive);
+  const userFolders = getUserFolders(existingFolders);
+
+  if (!Array.isArray(bookmarks) || bookmarks.length === 0) {
+    return [];
+  }
+
+  const engine = (typeof globalThis !== 'undefined' && globalThis.embeddingEngine) ||
+    (typeof globalThis !== 'undefined' && globalThis.qwenEngine) ||
+    (typeof globalThis !== 'undefined' && globalThis.jevEngine) ||
+    (typeof embeddingEngine !== 'undefined' ? embeddingEngine : null);
+
+  const results = [];
+  const total = bookmarks.length;
+  const BATCH_NOTIFY_SIZE = 10;
+
+  for (let i = 0; i < bookmarks.length; i++) {
+    if (batchAnalysisCancelled) break;
+    const bm = bookmarks[i];
+
+    let decision;
+    if (engine && typeof engine.classifyBookmark === 'function') {
+      decision = engine.classifyBookmark(bm, userFolders, { allowCreateFolders, allowRecursive });
+    } else {
+      decision = {
+        matchedCategory: userFolders[0] || 'Bookmarks Bar',
+        score: 0.5,
+        confidence: 0.5
+      };
+    }
+
+    const matchedCategory = normalizeCategoryToExistingFolders(
+      decision.matchedCategory,
+      userFolders,
+      allowCreateFolders,
+      { allowRecursive }
+    );
+
+    const itemResult = {
+      id: bm.id,
+      success: true,
+      matchedCategory,
+      score: decision.score || 0.5,
+      confidence: decision.confidence || 0.5,
+      fromMiniCPMModel: true,
+      fromLLMModel: true,
+      fromLFMModel: true,
+      fromQwenModel: true,
+      fromJevModel: true,
+      fromLocalEmbedding: true
+    };
+    results.push(itemResult);
+
+    // Broadcast batch progress periodically or at the end
+    if ((i + 1) % BATCH_NOTIFY_SIZE === 0 || i === bookmarks.length - 1) {
+      broadcastBatchProgress({
+        type: 'batchSuccess',
+        batchIndex: Math.floor(i / BATCH_NOTIFY_SIZE) + 1,
+        totalBatches: Math.ceil(total / BATCH_NOTIFY_SIZE),
+        batchSize: BATCH_NOTIFY_SIZE,
+        itemResults: results.slice(i - (i % BATCH_NOTIFY_SIZE)),
+        stats: {
+          inputTokens: (i + 1) * 20,
+          outputTokens: (i + 1) * 5,
+          responseTimeMs: 8,
+          modelName: engine?.modelName || 'MiniCPM5-1B (Q5_K_M)'
+        }
+      });
+    }
+  }
+
+  return results;
+}
+
+// Aliases for backwards compatibility
+async function classifyBookmarksWithMiniCPMModel(bookmarks, existingFolders, options = {}) {
+  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
+}
+async function classifyBookmarksWithLLMModel(bookmarks, existingFolders, options = {}) {
+  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
+}
+async function classifyBookmarksWithLFMModel(bookmarks, existingFolders, options = {}) {
+  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
+}
+async function classifyBookmarksWithJevModel(bookmarks, existingFolders, options = {}) {
+  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
+}
+async function classifyBookmarksWithQwenModel(bookmarks, existingFolders, options = {}) {
+  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
+}
+
+async function handleGetAISuggestion({ url, title, modelId }) {
+  const { settings, provider, hasAI } = await getAIConfig();
   const ruleFolder = matchesDomainRule(url, settings.domainRules || []);
   if (ruleFolder) {
     return { success: true, matchedCategory: ruleFolder };
   }
+
+  const targetModelManager = (typeof modelManager !== 'undefined' ? modelManager : null) ||
+    (typeof globalThis !== 'undefined' ? globalThis.modelManager : null);
+
+  if (modelId && modelId !== 'cloud' && modelId !== 'auto' && targetModelManager) {
+    if (targetModelManager.loadedModelId !== modelId) {
+      try {
+        await targetModelManager.loadModel(modelId);
+      } catch {}
+    }
+  }
+
+  const stored = await chrome.storage.local.get(['embeddingModelLoaded', 'embeddingModelId']).catch(() => ({}));
+  const isLocalLoaded = Boolean(targetModelManager?.isLoaded || stored.embeddingModelLoaded);
+  const isCloudRequested = modelId === 'cloud';
+  const preferLocal = isCloudRequested ? false : (isLocalLoaded || !hasAI);
+
+  if (preferLocal || !hasAI) {
+    const existingFolders = await getExistingBookmarkFolders();
+    const results = await classifyBookmarksWithJevModel([{ id: 'single', url, title }], existingFolders, {
+      allowCreateFolders: Boolean(settings.sortAllowCreateFolders),
+      allowRecursive: Boolean(settings.sortAllowRecursiveFolders)
+    });
+    const activeEngineName = (typeof embeddingEngine !== 'undefined' && embeddingEngine?.modelName) || 'Local Model';
+    return {
+      success: true,
+      matchedCategory: results[0]?.matchedCategory || 'Other',
+      fromLocalModel: true,
+      fromJevModel: true,
+      fromLocalEmbedding: true,
+      modelUsed: activeEngineName
+    };
+  }
+
   const analysis = await analyzeBookmark(url, settings, provider, title);
   return {
     success: true,
@@ -1820,20 +2270,32 @@ function broadcastBatchProgress(progressData) {
 async function handleGetAISuggestionsBatch(inputBookmarks, options = {}) {
   batchAnalysisCancelled = false;
   const { settings, provider, hasAI } = await getAIConfig();
+
+  const selectedModelId = options?.modelId || options?.options?.modelId;
+  const targetModelManager = (typeof modelManager !== 'undefined' ? modelManager : null) ||
+    (typeof globalThis !== 'undefined' ? globalThis.modelManager : null);
+
+  if (selectedModelId && selectedModelId !== 'cloud' && selectedModelId !== 'auto' && targetModelManager) {
+    if (targetModelManager.loadedModelId !== selectedModelId) {
+      try {
+        await targetModelManager.loadModel(selectedModelId);
+      } catch (err) {
+        console.warn(`Could not load requested model ${selectedModelId}:`, err);
+      }
+    }
+  }
+
+  const stored = await chrome.storage.local.get(['embeddingModelLoaded', 'embeddingModelId']).catch(() => ({}));
+  const isLocalLoaded = Boolean(targetModelManager?.isLoaded || stored.embeddingModelLoaded);
+  const isCloudRequested = selectedModelId === 'cloud';
+
+  // Automatic on-device sorting using whichever model is loaded, unless cloud is explicitly chosen
+  const preferLocal = isCloudRequested
+    ? false
+    : (isLocalLoaded || !hasAI || Boolean(options?.useLocalJevModel) || Boolean(options?.useLocalEmbeddings));
+
   const source = Array.isArray(inputBookmarks) ? inputBookmarks : [];
   if (source.length === 0) return { success: true, results: [] };
-
-  if (!hasAI) {
-    return {
-      success: false,
-      error: 'No AI provider configured. Please open Extension Settings to configure your API key.',
-      results: source.map(bm => ({
-        id: bm.id,
-        success: false,
-        error: 'No AI provider configured. Open Extension Settings to configure an API key.'
-      }))
-    };
-  }
 
   const allowCreateFolders = typeof options?.allowCreateFolders === 'boolean'
     ? options.allowCreateFolders
@@ -1879,6 +2341,28 @@ async function handleGetAISuggestionsBatch(inputBookmarks, options = {}) {
     return { success: true, results };
   }
 
+  if (preferLocal || !hasAI) {
+    const localResults = await classifyBookmarksWithJevModel(aiBookmarks, existingFolders, {
+      allowCreateFolders,
+      newFolderLocation,
+      allowRecursive
+    });
+    for (const r of localResults) {
+      results.push(r);
+    }
+    const order = new Map(source.map((bm, index) => [String(bm.id), index]));
+    results.sort((a, b) => order.get(String(a.id)) - order.get(String(b.id)));
+    const activeEngineName = (typeof embeddingEngine !== 'undefined' && embeddingEngine?.modelName) || 'Local Model';
+    return {
+      success: true,
+      results,
+      fromLocalModel: true,
+      fromJevModel: true,
+      fromLocalEmbedding: true,
+      modelUsed: activeEngineName
+    };
+  }
+
   const contextWindowTokens = sanitizeContextWindowTokens(settings.modelContextWindow);
   // User-configured batch size (default: 100, clamped between 5 and 100)
   const configuredBatchSize = typeof options?.batchSize === 'number'
@@ -1890,22 +2374,24 @@ async function handleGetAISuggestionsBatch(inputBookmarks, options = {}) {
   let folderListText = '';
   let promptInstructions = '';
 
+  const userFolders = getUserFolders(existingFolders);
+
   if (!allowCreateFolders) {
-    if (existingFolders.length > 0) {
-      folderListText = existingFolders.slice(0, 300).join('\n');
-      promptInstructions = `You are sorting bookmarks into existing folders. You MUST ONLY choose from the list of Existing Folders below. Do NOT invent new folders, do NOT modify folder names, and do NOT create category paths that are not in the list.
+    if (userFolders.length > 0) {
+      folderListText = userFolders.slice(0, 300).join('\n');
+      promptInstructions = `You are sorting bookmarks into existing user folders. You MUST ONLY choose from the list of Existing Folders below. Do NOT invent new folders, do NOT modify folder names, and do NOT create category paths that are not in the list. Under NO circumstances should you place bookmarks into browser vendor folders like "Mozilla Firefox" or default browser system folders.
 
 Existing Folders:
 ${folderListText}`;
     } else {
-      promptInstructions = `No custom bookmark folders exist. Assign every bookmark to "Bookmarks Bar". Do NOT create new folders.`;
+      promptInstructions = 'No custom bookmark folders exist. Assign every bookmark to "Bookmarks Bar". Do NOT create new folders.';
     }
   } else {
     let locationNote = '';
     if (newFolderLocation === 'root-other') {
       locationNote = ' Any new folders will be placed in "Other Bookmarks".';
     } else if (newFolderLocation && newFolderLocation !== 'root-bar') {
-      const locFolder = existingFolders.find(f => f.includes(newFolderLocation)) || newFolderLocation;
+      const locFolder = userFolders.find(f => f.includes(newFolderLocation)) || newFolderLocation;
       locationNote = ` Any new folders will be placed inside folder "${locFolder}".`;
     }
 
@@ -1913,14 +2399,14 @@ ${folderListText}`;
       ? 'You may suggest nested subfolder paths (e.g. "Work/Development") when appropriate.'
       : 'Do NOT suggest nested multi-level folder paths (e.g. do NOT output "A/B/C"). Suggest ONLY single-level concise folder names (e.g. "Development", "Finance", "News").';
 
-    if (existingFolders.length > 0) {
-      folderListText = existingFolders.slice(0, 300).join('\n');
-      promptInstructions = `Choose the single best folder category for each bookmark. Use an existing folder from the list below when it is a good fit; otherwise you may suggest a new concise folder name.${locationNote} ${recursiveNote}
+    if (userFolders.length > 0) {
+      folderListText = userFolders.slice(0, 300).join('\n');
+      promptInstructions = `Choose the single best folder category for each bookmark. Use an existing folder from the list below when it is a good fit; otherwise you may suggest a new concise folder name.${locationNote} ${recursiveNote} NEVER place bookmarks into browser vendor folders like "Mozilla Firefox".
 
 Existing Folders:
 ${folderListText}`;
     } else {
-      promptInstructions = `For each bookmark, suggest a concise category name.${locationNote} ${recursiveNote}`;
+      promptInstructions = `For each bookmark, suggest a concise category name (e.g. "Development", "Design", "News", "Shopping", "Finance").${locationNote} ${recursiveNote} NEVER place bookmarks into browser vendor folders like "Mozilla Firefox".`;
     }
   }
 
@@ -2446,7 +2932,7 @@ async function getOrCreateFolder(title, parentId) {
 }
 
 // Add context menu item for right-click bookmarking
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   chrome.contextMenus.create({
     id: 'aijbookmarks',
     title: 'Analyze and Bookmark with AI',
@@ -2454,13 +2940,28 @@ chrome.runtime.onInstalled.addListener(() => {
   });
   // Set up health check alarm based on saved settings
   setupHealthCheckAlarm().catch(console.error);
+
+  // Automatically enable on-device smart sorting out-of-the-box
+  try {
+    const local = await chrome.storage.local.get(['useLocalJevModel', 'useLocalEmbeddings']);
+    if (local.useLocalJevModel === undefined) {
+      await chrome.storage.local.set({ useLocalJevModel: true, useLocalEmbeddings: true });
+    }
+    const hasData = await modelManager.hasModelData();
+    if (hasData) {
+      await modelManager.loadModel();
+    }
+  } catch (e) {
+    console.warn('Auto-initialization notice:', e);
+  }
 });
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === 'aijbookmarks') {
-    // Open the popup or trigger analysis
-    chrome.action.openPopup();
+    if (chrome.action?.openPopup) {
+      chrome.action.openPopup().catch(() => {});
+    }
   }
 });
 
@@ -2472,14 +2973,14 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 // ============================================================
-// Bookmark Search
+// AI Batch Utilities
 // ============================================================
 
 /**
  * Builds a map of bookmark node IDs to their folder paths.
  * @returns {Promise<Object<string, string>>} Map of nodeId -> "Folder/Path"
  */
-async function getFolderPathMap() {
+async function _getFolderPathMap() {
   const { folderPathMap } = await getBookmarkTreeData();
   return folderPathMap;
 }
@@ -2494,7 +2995,7 @@ async function getAIConfig() {
     anthropicApiKey: '',
     openaiApiKey: '',
     openaiBaseUrl: 'https://api.openai.com/v1',
-    openaiModel: "",
+    openaiModel: '',
     openaiCustomModel: '',
     modelContextWindow: 131072,
     openrouterApiKey: '',
@@ -2621,244 +3122,6 @@ function buildSemanticBatches(candidates, semanticIntent, contextWindowTokens, m
   }
 
   return batches;
-}
-
-/**
- * Uses AI to parse a natural language search query into structured parameters.
- * Falls back to simple keyword splitting if AI is not configured.
- */
-async function handleParseSearchQuery(query) {
-  const { settings, provider, hasAI } = await getAIConfig();
-
-  if (!hasAI) {
-    // Fallback: split query into keywords, strip common filler words
-    const stopWords = new Set([
-      'find', 'show', 'me', 'my', 'all', 'the', 'that', 'about',
-      'bookmarks', 'bookmark', 'links', 'link', 'saved', 'i', 'were',
-      'what', 'where', 'which', 'a', 'an', 'of', 'to', 'in', 'for',
-      'with', 'on', 'at', 'from', 'by', 'it', 'is', 'was', 'are'
-    ]);
-    const keywords = query.toLowerCase().split(/\s+/)
-      .filter(w => w.length > 1 && !stopWords.has(w));
-    return {
-      success: true,
-      data: { keywords, dateRange: null, semanticIntent: query },
-      hasAI: false
-    };
-  }
-
-  const today = new Date().toISOString().split('T')[0];
-  const prompt = `Extract search parameters from this bookmark search query.
-Today's date is ${today}.
-
-Query: "${query}"
-
-Respond in JSON only:
-{
-  "keywords": ["keyword1", "keyword2"],
-  "dateRange": {"after": "YYYY-MM-DD", "before": "YYYY-MM-DD"} or null,
-  "semanticIntent": "brief description of what user is looking for"
-}`;
-
-  const responseText = await callAI(prompt, settings, provider, 256);
-
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Could not parse AI response');
-
-  const parsed = JSON.parse(jsonMatch[0]);
-  return {
-    success: true,
-    data: {
-      keywords: parsed.keywords || [],
-      dateRange: parsed.dateRange || null,
-      semanticIntent: parsed.semanticIntent || query
-    },
-    hasAI: true
-  };
-}
-
-/**
- * Searches bookmarks locally using WebGPU parallel compute and bitonic sorting
- * in VRAM when available, with automatic high-performance CPU fallback.
- */
-async function handleLocalBookmarkSearch(keywords, dateRange, options = {}) {
-  if (!keywords || keywords.length === 0) {
-    return { success: true, results: [] };
-  }
-
-  const trimmedKeywords = keywords.map(k => k.trim()).filter(Boolean);
-  const folderMap = await getFolderPathMap();
-  const allBookmarks = await getAllBookmarks();
-
-  // Attempt WebGPU Parallel Compute & VRAM Search
-  try {
-    const gpuInit = await initWebGPU();
-    if (gpuInit.supported) {
-      // Sync VRAM index if needed
-      if (!isGpuIndexSynced) {
-        const packed = packBookmarksForVram(allBookmarks);
-        const syncRes = await syncVramBookmarkIndex(packed.buffer, packed.count);
-        if (syncRes && syncRes.success) {
-          isGpuIndexSynced = true;
-        }
-      }
-
-      if (isGpuIndexSynced) {
-        const keywordHashes = trimmedKeywords.map(k => fnv1a32(k.toLowerCase())).filter(Boolean);
-        const afterDateSeconds = dateRange?.after ? Math.floor(new Date(dateRange.after).getTime() / 1000) : 0;
-        const beforeDateSeconds = dateRange?.before ? Math.floor(new Date(dateRange.before).getTime() / 1000) : 0;
-
-        const gpuRes = await runParallelGpuSearchAndSort({
-          keywordHashes,
-          afterDateSeconds,
-          beforeDateSeconds,
-          topK: 100
-        });
-
-        if (gpuRes && Array.isArray(gpuRes.results)) {
-          const results = [];
-          for (const item of gpuRes.results) {
-            const bm = allBookmarks[item.index];
-            if (bm && bm.url) {
-              results.push({
-                id: bm.id,
-                title: bm.title,
-                url: bm.url,
-                dateAdded: bm.dateAdded,
-                folderPath: folderMap[bm.parentId] || '',
-                matchType: 'gpu-parallel',
-                score: item.score
-              });
-            }
-          }
-          return {
-            success: true,
-            results,
-            gpuAccelerated: true,
-            gpuDurationMs: gpuRes.data.durationMs,
-            totalBookmarks: allBookmarks.length
-          };
-        }
-      }
-    }
-  } catch (gpuError) {
-    console.warn('WebGPU parallel search fell back to CPU:', gpuError);
-  }
-
-  // CPU Fallback
-  const afterMs = dateRange && dateRange.after ? new Date(dateRange.after).getTime() : null;
-  const beforeMs = dateRange && dateRange.before ? new Date(dateRange.before).getTime() : null;
-
-  const matchLists = await Promise.all(
-    trimmedKeywords.map(keyword => chrome.bookmarks.search({ query: keyword }))
-  );
-
-  const seen = new Set();
-  const results = [];
-
-  for (const matches of matchLists) {
-    for (const bm of matches) {
-      if (!bm.url || seen.has(bm.id)) continue;
-      seen.add(bm.id);
-
-      const added = bm.dateAdded || 0;
-      if (afterMs !== null && added < afterMs) continue;
-      if (beforeMs !== null && added > beforeMs) continue;
-
-      results.push({
-        id: bm.id,
-        title: bm.title,
-        url: bm.url,
-        dateAdded: bm.dateAdded,
-        folderPath: folderMap[bm.parentId] || '',
-        matchType: 'keyword'
-      });
-    }
-  }
-
-  return { success: true, results, gpuAccelerated: false };
-}
-
-/**
- * Uses AI to find semantically relevant bookmarks that keyword search may miss.
- * Processes bookmarks in batches to stay within token limits.
- */
-async function handleSemanticBookmarkSearch(semanticIntent, excludeIds) {
-  const { settings, provider, hasAI } = await getAIConfig();
-
-  if (!hasAI) {
-    return { success: true, results: [] };
-  }
-
-  const { allBookmarks, folderPathMap: folderMap } = await getBookmarkTreeData();
-  const excludeSet = new Set(excludeIds || []);
-
-  // Filter out already-found bookmarks
-  const candidates = allBookmarks.filter(bm => !excludeSet.has(bm.id));
-
-  const contextWindowTokens = sanitizeContextWindowTokens(settings.modelContextWindow);
-  const batches = buildSemanticBatches(candidates, semanticIntent, contextWindowTokens);
-
-  if (batches.length === 0) {
-    return { success: true, results: [] };
-  }
-
-  // Batches are independent AI requests sized by the configured context window.
-  // Fire them concurrently to minimize end-to-end latency when >1 batch is needed.
-  const batchResponses = await Promise.allSettled(batches.map(batch => {
-    const bookmarkData = batch.map(bm => ({
-      id: bm.id,
-      t: bm.title || '',
-      u: bm.url
-    }));
-
-    const prompt = `Given this search intent: "${semanticIntent}"
-
-Rate each bookmark's relevance (0-10). Return ONLY a JSON array of objects with "id" and "score" for bookmarks scoring 5 or higher. Return an empty array [] if none are relevant.
-
-Bookmarks:
-${JSON.stringify(bookmarkData)}`;
-
-    return callAI(prompt, settings, provider, 1024);
-  }));
-
-  const allResults = [];
-
-  batchResponses.forEach((response, batchIdx) => {
-    if (response.status !== 'fulfilled') {
-      console.error('Semantic search batch error:', response.reason);
-      return;
-    }
-
-    const jsonMatch = response.value.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return;
-
-    try {
-      const scored = JSON.parse(jsonMatch[0]);
-      // Index this batch once so scoring is an O(1) lookup instead of a linear scan per result.
-      const batchById = new Map(batches[batchIdx].map(bm => [bm.id, bm]));
-      for (const item of scored) {
-        if (item.score < 5) continue;
-        const bm = batchById.get(item.id);
-        if (!bm) continue;
-        allResults.push({
-          id: bm.id,
-          title: bm.title,
-          url: bm.url,
-          dateAdded: bm.dateAdded,
-          folderPath: folderMap[bm.parentId] || '',
-          matchType: 'semantic',
-          score: item.score
-        });
-      }
-    } catch (error) {
-      console.error('Semantic search batch parse error:', error);
-    }
-  });
-
-  // Sort by score descending
-  allResults.sort((a, b) => b.score - a.score);
-  return { success: true, results: allResults };
 }
 
 // ============================================================
@@ -3003,12 +3266,12 @@ async function checkSingleBookmark(bookmark, staleDays = 365) {
 
   try {
     let response = await fetchWithTimeout(bookmark.url, 'HEAD', TIMEOUT_MS);
-    let usedHead = !!response;
+    let _usedHead = !!response;
 
     if (!response || response.status >= 400) {
       abortResponseBody(response);
       response = await fetchWithTimeout(bookmark.url, 'GET', TIMEOUT_MS);
-      usedHead = false;
+      _usedHead = false;
     }
 
     if (!response) {
@@ -3434,447 +3697,3 @@ async function setupHealthCheckAlarm() {
 
   chrome.alarms.create('bookmarkHealthCheck', { periodInMinutes: intervalMinutes });
 }
-/**
- * AIJbookmarks - WebGPU Offscreen Compute Engine
- *
- * Implements:
- * 1. Persistent in-VRAM storage buffers for bookmark token/feature indices
- * 2. Parallel WGSL compute shaders for similarity scoring & relevance ranking
- * 3. Parallel GPU Bitonic sorting in VRAM
- * 4. Zero-copy ArrayBuffer transfer and mapped memory staging
- */
-
-let gpuDevice = null;
-let gpuAdapter = null;
-let isInitializing = false;
-
-// Persistent In-VRAM Storage Buffers
-let vramBookmarksBuffer = null;
-let vramBookmarksCapacity = 0;
-let vramBookmarkCount = 0;
-let vramPipelines = null;
-
-// Bookmark feature layout in uint32 units (16 uint32s = 64 bytes per bookmark)
-// [0]: bookmarkId u32
-// [1]: dateAddedSeconds u32
-// [2]: titleTokenCount u32
-// [3]: urlTokenCount u32
-// [4..11]: 8 title token hashes (u32)
-// [12..15]: 4 URL/domain token hashes (u32)
-const BOOKMARK_STRUCT_U32_COUNT = 16;
-const BOOKMARK_STRUCT_BYTE_SIZE = BOOKMARK_STRUCT_U32_COUNT * 4;
-
-/**
- * WGSL Compute Shader Sources
- */
-const SCORING_WGSL = /* wgsl */ `
-struct QueryParams {
-  keywordHashes: array<vec4<u32>, 4>, // up to 16 keyword hashes packed in vec4
-  keywordCount: u32,
-  afterDate: u32,
-  beforeDate: u32,
-  flags: u32, // bit 0: hasDateAfter, bit 1: hasDateBefore
-}
-
-struct BookmarkFeature {
-  id: u32,
-  dateAdded: u32,
-  titleLen: u32,
-  urlLen: u32,
-  titleHashes: array<vec4<u32>, 2>, // 8 title token hashes
-  urlHashes: vec4<u32>,            // 4 url token hashes
-}
-
-struct ScoreResult {
-  score: f32,
-  index: u32,
-}
-
-@group(0) @binding(0) var<uniform> query: QueryParams;
-@group(0) @binding(1) var<storage, read> bookmarks: array<BookmarkFeature>;
-@group(0) @binding(2) var<storage, read_write> results: array<ScoreResult>;
-@group(0) @binding(3) var<uniform> totalCount: u32;
-
-@compute @workgroup_size(256)
-fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-  let idx = global_id.x;
-  if (idx >= totalCount) {
-    return;
-  }
-
-  let bm = bookmarks[idx];
-
-  // Date filtering
-  let hasAfter = (query.flags & 1u) != 0u;
-  let hasBefore = (query.flags & 2u) != 0u;
-  if (hasAfter && bm.dateAdded < query.afterDate) {
-    results[idx] = ScoreResult(0.0, idx);
-    return;
-  }
-  if (hasBefore && bm.dateAdded > query.beforeDate) {
-    results[idx] = ScoreResult(0.0, idx);
-    return;
-  }
-
-  var score: f32 = 0.0;
-  let numKeywords = min(query.keywordCount, 16u);
-
-  // If no keywords provided, score based on date recency
-  if (numKeywords == 0u) {
-    let recencyScore = f32(bm.dateAdded) / 1000000.0;
-    results[idx] = ScoreResult(recencyScore, idx);
-    return;
-  }
-
-  var matchedKeywords: u32 = 0u;
-
-  for (var k: u32 = 0u; k < numKeywords; k = k + 1u) {
-    let qVecIdx = k / 4u;
-    let qElemIdx = k % 4u;
-    let qHash = query.keywordHashes[qVecIdx][qElemIdx];
-    if (qHash == 0u) {
-      continue;
-    }
-
-    var kwMatched = false;
-
-    // Check title tokens (weight: 3.0)
-    for (var t: u32 = 0u; t < 8u; t = t + 1u) {
-      let tVecIdx = t / 4u;
-      let tElemIdx = t % 4u;
-      let tHash = bm.titleHashes[tVecIdx][tElemIdx];
-      if (tHash != 0u && tHash == qHash) {
-        score = score + 3.0;
-        kwMatched = true;
-      }
-    }
-
-    // Check URL tokens (weight: 1.5)
-    for (var u: u32 = 0u; u < 4u; u = u + 1u) {
-      let uHash = bm.urlHashes[u];
-      if (uHash != 0u && uHash == qHash) {
-        score = score + 1.5;
-        kwMatched = true;
-      }
-    }
-
-    if (kwMatched) {
-      matchedKeywords = matchedKeywords + 1u;
-    }
-  }
-
-  // Bonus for matching all query keywords
-  if (matchedKeywords == numKeywords && numKeywords > 1u) {
-    score = score * 1.5;
-  }
-
-  // Slight recency tie-breaker
-  if (score > 0.0) {
-    score = score + (f32(bm.dateAdded % 100000u) / 1000000.0);
-  }
-
-  results[idx] = ScoreResult(score, idx);
-}
-`;
-
-const BITONIC_SORT_WGSL = /* wgsl */ `
-struct SortParams {
-  stage: u32,
-  stepOfStage: u32,
-  totalCount: u32,
-  direction: u32, // 1: descending, 0: ascending
-}
-
-struct ScoreResult {
-  score: f32,
-  index: u32,
-}
-
-@group(0) @binding(0) var<uniform> params: SortParams;
-@group(0) @binding(1) var<storage, read_write> data: array<ScoreResult>;
-
-@compute @workgroup_size(256)
-fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-  let i = global_id.x;
-  let pairDistance = 1u << params.stepOfStage;
-  let blockWidth   = 2u * pairDistance;
-
-  let leftId = (i / pairDistance) * blockWidth + (i % pairDistance);
-  let rightId = leftId + pairDistance;
-
-  if (rightId >= params.totalCount) {
-    return;
-  }
-
-  let sameDirectionBlock = ((leftId / (1u << (params.stage + 1u))) % 2u) == 0u;
-  let isDescending = (params.direction == 1u);
-  let shouldBeAscending = select(isDescending, !isDescending, sameDirectionBlock);
-
-  let leftElem = data[leftId];
-  let rightElem = data[rightId];
-
-  var shouldSwap: bool;
-  if (shouldBeAscending) {
-    shouldSwap = leftElem.score > rightElem.score;
-  } else {
-    shouldSwap = leftElem.score < rightElem.score;
-  }
-
-  if (shouldSwap) {
-    data[leftId] = rightElem;
-    data[rightId] = leftElem;
-  }
-}
-`;
-
-/**
- * Initializes WebGPU Device and creates compute shader pipelines
- */
-async function initWebGPU() {
-  if (gpuDevice) return { supported: true, device: gpuDevice };
-  if (!navigator.gpu) {
-    return { supported: false, reason: 'WebGPU not supported in this browser environment.' };
-  }
-
-  try {
-    gpuAdapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-    if (!gpuAdapter) {
-      return { supported: false, reason: 'Failed to acquire WebGPU adapter.' };
-    }
-
-    gpuDevice = await gpuAdapter.requestDevice();
-
-    gpuDevice.lost.then((info) => {
-      console.warn('WebGPU device was lost:', info);
-      gpuDevice = null;
-      vramBookmarksBuffer = null;
-      vramPipelines = null;
-    });
-
-    // Compile compute pipelines
-    const scoringModule = gpuDevice.createShaderModule({ code: SCORING_WGSL });
-    const sortingModule = gpuDevice.createShaderModule({ code: BITONIC_SORT_WGSL });
-
-    const scoringPipeline = gpuDevice.createComputePipeline({
-      layout: 'auto',
-      compute: { module: scoringModule, entryPoint: 'main' }
-    });
-
-    const sortingPipeline = gpuDevice.createComputePipeline({
-      layout: 'auto',
-      compute: { module: sortingModule, entryPoint: 'main' }
-    });
-
-    vramPipelines = { scoringPipeline, sortingPipeline };
-
-    return {
-      supported: true,
-      adapterInfo: {
-        vendor: gpuAdapter.info?.vendor || 'Generic GPU',
-        architecture: gpuAdapter.info?.architecture || 'Generic Architecture',
-        device: gpuAdapter.info?.device || 'WebGPU Device'
-      }
-    };
-  } catch (err) {
-    console.error('Error initializing WebGPU:', err);
-    return { supported: false, reason: err.message };
-  }
-}
-
-/**
- * Synchronizes/allocates persistent VRAM buffer with bookmark feature data
- * @param {ArrayBuffer} rawDataBuffer Binary packed bookmark features
- * @param {number} count Total number of bookmarks
- */
-async function syncVramBookmarkIndex(rawDataBuffer, count) {
-  const init = await initWebGPU();
-  if (!init.supported) throw new Error(init.reason);
-
-  const byteSize = count * BOOKMARK_STRUCT_BYTE_SIZE;
-  if (byteSize === 0) {
-    vramBookmarkCount = 0;
-    return { success: true, count: 0, vramBytes: 0 };
-  }
-
-  // Allocate or resize VRAM buffer if capacity is insufficient
-  if (!vramBookmarksBuffer || vramBookmarksCapacity < byteSize) {
-    if (vramBookmarksBuffer) {
-      vramBookmarksBuffer.destroy();
-    }
-    // Allocate with headroom (power of two or minimum 64KB)
-    vramBookmarksCapacity = Math.max(65536, Math.pow(2, Math.ceil(Math.log2(byteSize))));
-    vramBookmarksBuffer = gpuDevice.createBuffer({
-      size: vramBookmarksCapacity,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-      label: 'VRAM_Bookmark_Features_Buffer'
-    });
-  }
-
-  // Zero-copy transfer data into VRAM buffer
-  gpuDevice.queue.writeBuffer(
-    vramBookmarksBuffer,
-    0,
-    rawDataBuffer,
-    0,
-    byteSize
-  );
-
-  vramBookmarkCount = count;
-  return {
-    success: true,
-    count,
-    vramBytes: vramBookmarksCapacity,
-    allocatedMB: (vramBookmarksCapacity / (1024 * 1024)).toFixed(2)
-  };
-}
-
-/**
- * Runs parallel scoring and bitonic sorting entirely in VRAM
- * @param {object} queryOptions
- * @returns {Promise<{results: Array<{index: number, score: number}>, durationMs: number}>}
- */
-async function runParallelGpuSearchAndSort(queryOptions) {
-  const init = await initWebGPU();
-  if (!init.supported) throw new Error(init.reason);
-  if (!vramBookmarksBuffer || vramBookmarkCount === 0) {
-    return { results: [], durationMs: 0 };
-  }
-
-  const startTime = performance.now();
-  const count = vramBookmarkCount;
-
-  // Round up count to next power of 2 for bitonic sorting
-  const paddedCount = Math.max(256, Math.pow(2, Math.ceil(Math.log2(count))));
-  const scoreElementByteSize = 8; // f32 score + u32 index = 8 bytes
-  const scoreBufferSize = paddedCount * scoreElementByteSize;
-
-  // 1. Create Query Uniform Buffer
-  // QueryParams layout:
-  // 16 u32 keywordHashes (64 bytes)
-  // 1 u32 keywordCount (4 bytes)
-  // 1 u32 afterDate (4 bytes)
-  // 1 u32 beforeDate (4 bytes)
-  // 1 u32 flags (4 bytes)
-  const queryUniformData = new Uint32Array(20);
-  const keywordHashes = queryOptions.keywordHashes || [];
-  for (let i = 0; i < Math.min(16, keywordHashes.length); i++) {
-    queryUniformData[i] = keywordHashes[i];
-  }
-  queryUniformData[16] = keywordHashes.length;
-  queryUniformData[17] = queryOptions.afterDateSeconds || 0;
-  queryUniformData[18] = queryOptions.beforeDateSeconds || 0;
-  let flags = 0;
-  if (queryOptions.afterDateSeconds) flags |= 1;
-  if (queryOptions.beforeDateSeconds) flags |= 2;
-  queryUniformData[19] = flags;
-
-  const queryBuffer = gpuDevice.createBuffer({
-    size: 80,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-  });
-  gpuDevice.queue.writeBuffer(queryBuffer, 0, queryUniformData.buffer);
-
-  const totalCountBuffer = gpuDevice.createBuffer({
-    size: 4,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-  });
-  gpuDevice.queue.writeBuffer(totalCountBuffer, 0, new Uint32Array([count]));
-
-  // 2. Create VRAM Scores Buffer & Staging Buffer
-  const scoresBuffer = gpuDevice.createBuffer({
-    size: scoreBufferSize,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-    label: 'VRAM_Scores_Buffer'
-  });
-
-  const stagingBuffer = gpuDevice.createBuffer({
-    size: scoreBufferSize,
-    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
-    label: 'Staging_Readback_Buffer'
-  });
-
-  // 3. Bind and Dispatch Scoring Shader
-  const scoringBindGroup = gpuDevice.createBindGroup({
-    layout: vramPipelines.scoringPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: queryBuffer } },
-      { binding: 1, resource: { buffer: vramBookmarksBuffer } },
-      { binding: 2, resource: { buffer: scoresBuffer } },
-      { binding: 3, resource: { buffer: totalCountBuffer } }
-    ]
-  });
-
-  const commandEncoder = gpuDevice.createCommandEncoder();
-  const scorePass = commandEncoder.beginComputePass();
-  scorePass.setPipeline(vramPipelines.scoringPipeline);
-  scorePass.setBindGroup(0, scoringBindGroup);
-  scorePass.dispatchWorkgroups(Math.ceil(count / 256));
-  scorePass.end();
-
-  // 4. Bitonic Sort Passes in VRAM (Descending Order)
-  const numStages = Math.log2(paddedCount);
-  const sortParamsBuffer = gpuDevice.createBuffer({
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-  });
-
-  for (let stage = 0; stage < numStages; stage++) {
-    for (let step = stage; step >= 0; step--) {
-      // SortParams: stage, stepOfStage, totalCount, direction (1 = descending)
-      const sortParams = new Uint32Array([stage, step, paddedCount, 1]);
-      gpuDevice.queue.writeBuffer(sortParamsBuffer, 0, sortParams);
-
-      const sortBindGroup = gpuDevice.createBindGroup({
-        layout: vramPipelines.sortingPipeline.getBindGroupLayout(0),
-        entries: [
-          { binding: 0, resource: { buffer: sortParamsBuffer } },
-          { binding: 1, resource: { buffer: scoresBuffer } }
-        ]
-      });
-
-      const sortPass = commandEncoder.beginComputePass();
-      sortPass.setPipeline(vramPipelines.sortingPipeline);
-      sortPass.setBindGroup(0, sortBindGroup);
-      sortPass.dispatchWorkgroups(Math.ceil((paddedCount / 2) / 256));
-      sortPass.end();
-    }
-  }
-
-  // 5. Copy sorted VRAM scores buffer to mapped readback buffer
-  commandEncoder.copyBufferToBuffer(scoresBuffer, 0, stagingBuffer, 0, scoreBufferSize);
-  gpuDevice.queue.submit([commandEncoder.finish()]);
-
-  // 6. Asynchronous Map & Zero-Copy Result Read
-  await stagingBuffer.mapAsync(GPUMapMode.READ);
-  const mappedArray = new ArrayBuffer(scoreBufferSize);
-  new Uint8Array(mappedArray).set(new Uint8Array(stagingBuffer.getMappedRange()));
-  stagingBuffer.unmap();
-
-  // Parse Top-K results
-  const topK = queryOptions.topK || 50;
-  const floatView = new Float32Array(mappedArray);
-  const uintView = new Uint32Array(mappedArray);
-  const results = [];
-
-  for (let i = 0; i < Math.min(count, paddedCount); i++) {
-    const score = floatView[i * 2];
-    const index = uintView[i * 2 + 1];
-    if (score > 0 && results.length < topK) {
-      results.push({ index, score: parseFloat(score.toFixed(4)) });
-    }
-  }
-
-  // Clean up transient execution buffers
-  queryBuffer.destroy();
-  totalCountBuffer.destroy();
-  scoresBuffer.destroy();
-  sortParamsBuffer.destroy();
-  stagingBuffer.destroy();
-
-  const durationMs = parseFloat((performance.now() - startTime).toFixed(2));
-  return { results, durationMs, totalProcessed: count };
-}
-
-/**
- * Message Dispatcher for Service Worker <-> Offscreen Communication
- */

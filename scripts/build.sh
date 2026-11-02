@@ -11,10 +11,12 @@ build_chrome() {
   
   cp "$ROOT_DIR/manifest.json" "$ROOT_DIR/dist/chrome/manifest.json"
   cp "$ROOT_DIR/background.js" "$ROOT_DIR/dist/chrome/"
+  cp "$ROOT_DIR/model-manager.js" "$ROOT_DIR/dist/chrome/"
+  cp "$ROOT_DIR/embedding-engine.js" "$ROOT_DIR/dist/chrome/"
+  cp "$ROOT_DIR/offscreen.html" "$ROOT_DIR/offscreen.js" "$ROOT_DIR/dist/chrome/"
   cp "$ROOT_DIR/popup.html" "$ROOT_DIR/popup.js" "$ROOT_DIR/dist/chrome/"
   cp "$ROOT_DIR/options.html" "$ROOT_DIR/options.js" "$ROOT_DIR/dist/chrome/"
   cp "$ROOT_DIR/health-check.html" "$ROOT_DIR/health-check.js" "$ROOT_DIR/dist/chrome/"
-  cp "$ROOT_DIR/search.html" "$ROOT_DIR/search.js" "$ROOT_DIR/dist/chrome/"
   cp "$ROOT_DIR/inbox.html" "$ROOT_DIR/inbox.js" "$ROOT_DIR/dist/chrome/"
   cp -r "$ROOT_DIR/icons" "$ROOT_DIR/dist/chrome/"
   cp "$ROOT_DIR/README.md" "$ROOT_DIR/PRIVACY.md" "$ROOT_DIR/dist/chrome/" 2>/dev/null || true
@@ -32,10 +34,12 @@ build_firefox() {
   
   cp "$ROOT_DIR/manifest.firefox.json" "$ROOT_DIR/dist/firefox/manifest.json"
   cp "$ROOT_DIR/background.js" "$ROOT_DIR/dist/firefox/"
+  cp "$ROOT_DIR/model-manager.js" "$ROOT_DIR/dist/firefox/"
+  cp "$ROOT_DIR/embedding-engine.js" "$ROOT_DIR/dist/firefox/"
+  cp "$ROOT_DIR/offscreen.html" "$ROOT_DIR/offscreen.js" "$ROOT_DIR/dist/firefox/"
   cp "$ROOT_DIR/popup.html" "$ROOT_DIR/popup.js" "$ROOT_DIR/dist/firefox/"
   cp "$ROOT_DIR/options.html" "$ROOT_DIR/options.js" "$ROOT_DIR/dist/firefox/"
   cp "$ROOT_DIR/health-check.html" "$ROOT_DIR/health-check.js" "$ROOT_DIR/dist/firefox/"
-  cp "$ROOT_DIR/search.html" "$ROOT_DIR/search.js" "$ROOT_DIR/dist/firefox/"
   cp "$ROOT_DIR/inbox.html" "$ROOT_DIR/inbox.js" "$ROOT_DIR/dist/firefox/"
   cp -r "$ROOT_DIR/icons" "$ROOT_DIR/dist/firefox/"
   cp "$ROOT_DIR/README.md" "$ROOT_DIR/PRIVACY.md" "$ROOT_DIR/FIREFOX.md" "$ROOT_DIR/dist/firefox/" 2>/dev/null || true

@@ -21,6 +21,18 @@
       padding: 40px 24px 60px;
     }
 
+    .header-title-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .header-title-group img {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
     .page-header {
       display: flex;
       align-items: flex-start;
@@ -315,14 +327,268 @@
     }
     .empty-state svg { margin-bottom: 12px; opacity: 0.4; }
     .empty-state p { font-size: 15px; }
+
+    /* Apple HIG Dark Mode Styles */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #1c1c1e;
+        color: #ffffff;
+      }
+
+      .page-header h1 {
+        color: #ffffff;
+      }
+
+      .page-header p {
+        color: #8e8e93;
+      }
+
+      .scope-card {
+        background: #1e1e1e;
+        border-color: #383838;
+      }
+
+      .scope-field label {
+        color: #ffffff;
+      }
+
+      .scope-field select {
+        background-color: #2c2c2e;
+        color: #ffffff;
+        border-color: #383838;
+      }
+
+      .scope-field select:focus {
+        border-color: #0091ff;
+        box-shadow: 0 0 0 1px #0091ff;
+      }
+
+      .scope-note {
+        color: #8e8e93;
+      }
+
+      .scope-options {
+        border-top-color: #383838;
+      }
+
+      .toggle-label {
+        color: #ffffff;
+      }
+
+      .toggle-hint {
+        color: #8e8e93;
+      }
+
+      .btn-primary {
+        background: #0091ff;
+        color: #ffffff;
+      }
+
+      .btn-primary:not(:disabled):hover {
+        background: #007ae6;
+      }
+
+      .btn-secondary {
+        background: #3a3a3c;
+        color: #ffffff;
+        border-color: #383838;
+      }
+
+      .btn-secondary:not(:disabled):hover {
+        background: #444446;
+        color: #3cd3fe;
+        border-color: #3cd3fe;
+      }
+
+      .btn-danger {
+        background: #ff4245;
+        color: #ffffff;
+      }
+
+      .btn-danger:not(:disabled):hover {
+        background: #d9383b;
+      }
+
+      .alert {
+        border-width: 1px;
+        border-style: solid;
+      }
+
+      .alert-info, .alert-loading {
+        background: rgba(0, 145, 255, 0.15);
+        color: #3cd3fe;
+        border-color: rgba(0, 145, 255, 0.3);
+      }
+
+      .alert-success {
+        background: rgba(48, 209, 88, 0.15);
+        color: #30d158;
+        border-color: rgba(48, 209, 88, 0.3);
+      }
+
+      .alert-error {
+        background: rgba(255, 66, 69, 0.15);
+        color: #ff4245;
+        border-color: rgba(255, 66, 69, 0.3);
+      }
+
+      .card {
+        background: #1e1e1e;
+        border-color: #383838;
+      }
+
+      thead th {
+        background: #2c2c2e;
+        color: #8e8e93;
+        border-bottom-color: #383838;
+      }
+
+      tbody tr {
+        border-bottom-color: #2c2c2e;
+      }
+
+      tbody tr:hover {
+        background: #2c2c2e;
+      }
+
+      .bm-title a {
+        color: #ffffff;
+      }
+
+      .bm-title a:hover {
+        color: #3cd3fe;
+      }
+
+      .bm-url {
+        color: #8e8e93;
+      }
+
+      .suggestion {
+        background: rgba(0, 145, 255, 0.15);
+        color: #3cd3fe;
+      }
+
+      .suggestion-edit {
+        background: #2c2c2e;
+        color: #ffffff;
+        border-color: #0091ff;
+      }
+
+      .suggestion-edit:focus {
+        box-shadow: 0 0 0 2px rgba(0, 145, 255, 0.25);
+      }
+
+      .row-status.ready {
+        color: #8e8e93;
+      }
+
+      .row-status.approved, .row-status.done {
+        color: #30d158;
+      }
+
+      .row-status.denied {
+        color: #636366;
+      }
+
+      .row-status.analyzing {
+        color: #3cd3fe;
+      }
+
+      .row-status.moving {
+        color: #ff9f0a;
+      }
+
+      .row-status.error {
+        color: #ff4245;
+      }
+
+      .spinner {
+        border-color: #0091ff;
+        border-top-color: transparent;
+      }
+
+      .batch-progress-card {
+        background: #1e1e1e;
+        border-color: #383838;
+      }
+
+      .batch-progress-title {
+        color: #ffffff;
+      }
+
+      .batch-progress-summary {
+        color: #8e8e93;
+      }
+
+      .progress-bar-track {
+        background: #2c2c2e;
+      }
+
+      .progress-bar-fill {
+        background: #0091ff;
+      }
+
+      .batch-log-entry {
+        background: #2c2c2e;
+        border-color: #383838;
+      }
+
+      .batch-log-entry.active {
+        background: rgba(0, 145, 255, 0.15);
+        border-color: #0091ff;
+      }
+
+      .batch-log-entry.complete {
+        background: #2c2c2e;
+        border-color: #383838;
+      }
+
+      .batch-log-entry.error {
+        background: rgba(255, 66, 69, 0.15);
+        border-color: rgba(255, 66, 69, 0.3);
+      }
+
+      .batch-log-title {
+        color: #ffffff;
+      }
+
+      .batch-log-items {
+        color: #8e8e93;
+      }
+
+      .batch-log-stats {
+        background: #1e1e1e;
+        border-color: #383838;
+        color: #3cd3fe;
+      }
+
+      .batch-log-entry.error .batch-log-stats {
+        background: #1e1e1e;
+        border-color: rgba(255, 66, 69, 0.3);
+        color: #ff4245;
+      }
+
+      .empty-state {
+        color: #8e8e93;
+      }
+
+      #sortModelSelect {
+        background: #2c2c2e !important;
+        color: #ffffff !important;
+        border-color: #383838 !important;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="page-header">
-      <div>
-        <h1>To Sort</h1>
-        <p id="scopeDescription">Bookmarks sitting directly on your Bookmarks Bar or Other Bookmarks, not in any folder.</p>
+      <div class="header-title-group">
+        <img src="icons/icon48.png" alt="AIJbookmarks">
+        <div>
+          <h1>To Sort</h1>
+          <p id="scopeDescription">Bookmarks sitting directly on your Bookmarks Toolbar, Bookmarks Menu, or Other Bookmarks, not in any folder.</p>
+        </div>
       </div>
       <div class="header-actions">
         <button id="openSettingsBtn" class="btn btn-secondary" type="button" title="Open Extension Settings">⚙️ Settings</button>
@@ -338,19 +604,19 @@
         <div class="scope-field">
           <label for="sortScopeMode">Bookmarks to sort</label>
           <select id="sortScopeMode">
-            <option value="roots">Only direct bookmarks on Bookmarks Bar and Other Bookmarks</option>
+            <option value="roots">All unsorted bookmarks (Toolbar, Menu &amp; Other)</option>
             <option value="folder">Choose a specific folder or subfolder</option>
           </select>
         </div>
         <div class="scope-field" id="sortFolderField" style="display:none">
           <label for="sortFolderSelect">Folder or subfolder</label>
           <select id="sortFolderSelect" disabled>
-            <option value="">Choose a folder…</option>
+            <option value="">Choose a folder or subfolder…</option>
           </select>
         </div>
         <button id="refreshScopeBtn" class="btn btn-secondary" type="button">Refresh</button>
       </div>
-      <p id="scopeNote" class="scope-note">Safe default: only direct bookmarks on the Bookmarks Bar and Other Bookmarks are included. Folders and their nested contents are excluded.</p>
+      <p id="scopeNote" class="scope-note">Safe default: direct bookmarks on the Bookmarks Toolbar, Bookmarks Menu, and Other Bookmarks are included. Folders and their nested contents are excluded.</p>
       <div class="scope-options" style="display: flex; flex-direction: column; gap: 8px;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <label class="toggle-label" for="allowCreateFolders">
@@ -363,7 +629,8 @@
           <div style="display: inline-flex; align-items: center; gap: 6px;">
             <label for="inboxNewFolderLocation" style="font-size: 12px; color: var(--text-secondary, #64748b);">Create in:</label>
             <select id="inboxNewFolderLocation" class="form-input-select" style="font-size: 12px; padding: 3px 8px; height: 28px; min-width: 140px;">
-              <option value="root-bar">Bookmarks Bar</option>
+              <option value="root-bar">Bookmarks Bar / Toolbar</option>
+              <option value="root-menu">Bookmarks Menu</option>
               <option value="root-other">Other Bookmarks</option>
             </select>
           </div>
@@ -373,6 +640,16 @@
               <span>Allow recursive subfolders</span>
             </label>
           </div>
+        </div>
+        <div id="localEmbeddingsSortRow" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <label for="sortModelSelect" style="font-size: 13px; font-weight: 500; color: var(--text-primary, #1e293b); display: inline-flex; align-items: center; gap: 6px;">
+            <span>Sorting model:</span>
+          </label>
+          <select id="sortModelSelect" class="form-input-select" style="font-size: 12px; padding: 3px 8px; height: 30px; border-radius: 6px; border: 1px solid var(--border-color, #cbd5e1); background: var(--bg-card, #ffffff); font-weight: 500; min-width: 220px;">
+            <option value="auto">Detecting loaded model…</option>
+          </select>
+          <span id="localEmbeddingSortBadge" class="badge" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; display: none;"></span>
+          <input type="checkbox" id="useLocalEmbeddingsSort" checked style="display: none;">
         </div>
       </div>
     </div>

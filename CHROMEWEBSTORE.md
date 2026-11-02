@@ -14,9 +14,9 @@ Automatically organizes, categorizes, and summarizes your browser bookmarks usin
 Automatically organizes webpage bookmarks into structured folders using AI-powered analysis.
 
 FEATURES
-• Automated Organization — Analyzes page context using Claude, OpenAI, Google Gemini, or OpenRouter to file bookmarks into relevant folders.
+• Automated Organization — Analyzes page context using Claude, OpenAI, Google Gemini, OpenRouter, or local EmbeddingGemma-2 embedding model to file bookmarks into relevant folders.
 • Context Summaries — Generates brief webpage summaries and stores them in the bookmark description.
-• WebGPU Parallel Search — Hardware-accelerated local bookmark search using GPU compute shaders with CPU fallback.
+• Local EmbeddingGemma-2 Embedding Model — On-device EmbeddingGemma-2 (UD-Q4_K_XL) model powered by node-llama-cpp for instant offline bookmark classification and sorting with zero cloud dependency.
 • Link Health Audits — Fast in-memory audit engine detecting dead links, redirects, and stale bookmarks with Cloudflare/CAPTCHA challenge protection.
 • Direct Integrations — Syncs links to Todoist tasks, Instapaper, Readwise, Raindrop.io, or macOS/iOS Things.
 • Context Menu Support — Bookmark any page or link directly via the right-click context menu.
@@ -33,7 +33,7 @@ PERMISSIONS
 • "bookmarks" — Required to read your folder tree and automatically file or update bookmarks.
 • "activeTab" — Required to temporarily retrieve the URL and title of the active tab for categorization when clicked.
 • "storage" — Required to locally save configurations and API keys in your browser.
-• "offscreen" — Required to create an isolated offscreen document for WebGPU parallel search acceleration.
+• "offscreen" — Required to create an isolated offscreen document for local hardware acceleration pipelines.
 • "contextMenus" — Required to display the right-click shortcut to bookmark pages.
 • "alarms" — Required to schedule periodic, low-priority background scans for link health checks.
 • Host Permissions — Required to securely send text metadata to Anthropic, OpenAI, Google Gemini, OpenRouter, Instapaper, Readwise, Raindrop, or Todoist APIs.
@@ -41,7 +41,7 @@ PERMISSIONS
 SUPPORT
 Found a bug? Have a suggestion? Open an issue on our GitHub repository: https://github.com/AIJosue/AIJbookmarks
 
-Version 3.2.0 — Added WebGPU parallel search acceleration with VRAM caching, revamped Link Health Check with live counters, Cloudflare/bot challenge protection, in-memory RAM session storage, and Readwise/Raindrop integrations.
+Version 3.3.0 — Added EmbeddingGemma-2 (UD-Q4_K_XL) open-source embedding model powered by node-llama-cpp for on-device bookmark classification & sorting, revamped Link Health Check with live counters, Cloudflare/bot challenge protection, in-memory RAM session storage, and Readwise/Raindrop integrations.
 
 **Category**
 Productivity
@@ -77,7 +77,7 @@ English
 | `bookmarks` | permissions | Required to read the user's existing folder paths for AI matching, and to programmatically create/nest new bookmark folders and bookmarks on the user's device. |
 | `activeTab` | permissions | Required to temporarily retrieve the active page's URL and title for categorization when the extension popup is opened or context menu is clicked. |
 | `storage` | permissions | Required to locally store and persist API keys, selected AI models, active integration settings, and temporary session data on the user's browser. |
-| `offscreen` | permissions | Required to execute WebGPU compute pipelines and shaders in an isolated offscreen document context for fast parallel search. |
+| `offscreen` | permissions | Required to execute hardware-accelerated compute pipelines in an isolated offscreen document context. |
 | `contextMenus` | permissions | Required to register and display the "Analyze and Bookmark with AI" shortcut option when right-clicking on webpage canvases, links, or selections. |
 | `alarms` | permissions | Required to schedule periodic, low-priority background scans for the bookmark health-check feature to identify broken, dead, or redirected links. |
 | `https://api.anthropic.com/*` | host_permissions | Required to directly transmit webpage text, URLs, and existing category paths to Anthropic's Claude models for secure, serverless categorization and summarization. |
@@ -147,7 +147,7 @@ https://github.com/AIJosue/AIJbookmarks
 | 2.3.1 | 2026-05-24 | Fixed critical "Can't find bookmark for id" errors on launch/inbox load in customized profiles and other browsers (Edge/Arc) by dynamically resolving root folder IDs and wrapping getChildren in safe error-catch blocks. | Draft |
 | 2.3.0 | 2026-05-24 | Integrated Google Gemini support with model selection (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 1.5 Flash, Gemini 1.5 Pro) in Extension settings, validation checks, background worker support, host permissions, and documentation updates. | Draft |
 | 2.2.0 | 2026-05-20 | Bumped version to 2.2.0 to resolve Web Store upload conflicts; expanded Bookmark Health Check feature descriptions in developer README and store listing documentation. | Draft |
-| 2.1.0 | 2026-05-20 | Rebuilt service worker with clean Manifest V3 async/await IIFE routines; completely eliminated legacy callback-to-Promise wrapper utilities across search.js and health-check.js; optimized link health check scanner with robust error handling; updated permissions justifications. | Published |
+| 2.1.0 | 2026-05-20 | Rebuilt service worker with clean Manifest V3 async/await IIFE routines; completely eliminated legacy callback-to-Promise wrapper utilities across health-check.js; optimized link health check scanner with robust error handling; updated permissions justifications. | Published |
 | 1.0.0 | 2025-03-15 | Initial public release containing multi-provider AI analysis (Anthropic & OpenRouter), full Chrome bookmarks integration, Instapaper, Todoist, and Cultured Code Things support, and interactive link health diagnostics. | Published |
 
 ## Review Notes

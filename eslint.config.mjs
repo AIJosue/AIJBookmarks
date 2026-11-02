@@ -1,12 +1,14 @@
 export default [
   {
     files: ['**/*.js'],
-    ignores: ['node_modules/**'],
+    ignores: ['node_modules/**', 'dist/**'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script',
       globals: {
         chrome: 'readonly',
+        self: 'readonly',
+        globalThis: 'readonly',
         window: 'readonly',
         document: 'readonly',
         navigator: 'readonly',
@@ -21,6 +23,7 @@ export default [
         clearInterval: 'readonly',
         AbortController: 'readonly',
         TextDecoder: 'readonly',
+        TextEncoder: 'readonly',
         confirm: 'readonly',
         alert: 'readonly',
         importScripts: 'readonly',
@@ -29,11 +32,27 @@ export default [
         Date: 'readonly',
         Math: 'readonly',
         JSON: 'readonly',
-        parseInt: 'readonly'
+        parseInt: 'readonly',
+        caches: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        Headers: 'readonly',
+        Blob: 'readonly',
+        Float32Array: 'readonly',
+        Uint8Array: 'readonly',
+        Uint32Array: 'readonly',
+        ArrayBuffer: 'readonly',
+        performance: 'readonly',
+        indexedDB: 'readonly',
+        GPUBufferUsage: 'readonly',
+        GPUMapMode: 'readonly',
+        modelManager: 'readonly',
+        embeddingEngine: 'readonly',
+        jevEngine: 'readonly'
       }
     },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-undef': 'error',
       'no-console': 'off',
       'semi': ['error', 'always'],

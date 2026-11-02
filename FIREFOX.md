@@ -1,6 +1,6 @@
 # AIJbookmarks for Mozilla Firefox
 
-**AIJbookmarks** provides 100% 1-to-1 feature parity on Mozilla Firefox, utilizing Firefox Manifest V3 with full support for AI categorization, automated inbox sorting, link health checking, semantic & keyword search, and read-it-later integrations.
+**AIJbookmarks** provides 100% 1-to-1 feature parity on Mozilla Firefox, utilizing Firefox Manifest V3 with full support for AI categorization, automated inbox sorting, link health checking, local Jev decision models, and read-it-later integrations.
 
 ---
 
@@ -42,7 +42,7 @@
 | **Inbox & Mass Auto-Sorting** | ✅ | ✅ | Sorts unsorted bookmarks sitting in Toolbar, Unfiled, or Menu roots |
 | **Folder Organization Planner** | ✅ | ✅ | Merges duplicates and reorganizes folders with safety checks |
 | **Health Check Auditor** | ✅ | ✅ | Parallel 404, redirect, and dead-link detection with auto-fix |
-| **Fast Bookmark Search** | ✅ | ✅ | WebGPU compute with high-performance CPU search fallback |
+| **Local EmbeddingGemma-2 Embedding Model** | ✅ | ✅ | On-device EmbeddingGemma-2 (UD-Q4_K_XL) model powered by node-llama-cpp |
 | **Third-Party Integrations** | ✅ | ✅ | Instapaper, Todoist, and Things 3 URL schemes |
 | **Encrypted Sync Storage** | ✅ | ✅ | Cross-device API key and setting persistence via `browser.storage.sync` |
 

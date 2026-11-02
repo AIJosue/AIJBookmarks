@@ -33,18 +33,19 @@
     .header-icon {
       width: 36px;
       height: 36px;
-      background: linear-gradient(135deg, #1a73e8, #1557b0);
-      border-radius: 50%;
+      border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 4px rgba(26, 115, 232, 0.2);
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     }
 
-    .header-icon svg {
-      width: 18px;
-      height: 18px;
-      fill: white;
+    .header-icon img {
+      width: 36px;
+      height: 36px;
+      object-fit: cover;
+      display: block;
     }
 
     .header-text h1 {
@@ -58,59 +59,6 @@
       font-size: 12px;
       color: #5f6368;
       margin-top: 1px;
-    }
-
-    /* Gmail-style Search Section */
-    .search-section {
-      padding: 12px 16px 16px;
-      background: #fff;
-      border-bottom: 1px solid #f1f3f4;
-    }
-
-    .gmail-search-bar {
-      display: flex;
-      align-items: center;
-      background: #f1f3f8; /* Gmail soft blue-grey background */
-      border-radius: 28px;
-      padding: 4px 16px;
-      gap: 10px;
-      transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
-      border: 1px solid transparent;
-      min-height: 48px;
-    }
-
-    .gmail-search-bar:focus-within {
-      background: #fff;
-      border-color: rgba(26, 115, 232, 0.3);
-      box-shadow: 0 1px 3px rgba(60,64,67,0.15), 0 4px 8px 3px rgba(60,64,67,0.08);
-    }
-
-    .search-icon {
-      width: 20px;
-      height: 20px;
-      fill: #5f6368;
-      flex-shrink: 0;
-      transition: fill 0.15s;
-    }
-
-    .gmail-search-bar:focus-within .search-icon {
-      fill: #1a73e8;
-    }
-
-    .gmail-search-bar input {
-      flex: 1;
-      width: 100%;
-      border: none;
-      background: transparent;
-      font-size: 13px;
-      font-family: inherit;
-      color: #202124;
-      outline: none;
-      padding: 8px 0;
-    }
-
-    .gmail-search-bar input::placeholder {
-      color: #70757a;
     }
 
     /* Options Section with MD3 Switches */
@@ -419,163 +367,158 @@
       transform: rotate(45deg);
     }
 
-    /* Premium Dark Mode Styles */
+    /* Apple HIG Dark Mode Styles */
     @media (prefers-color-scheme: dark) {
       body {
-        background: #1a1a1a;
-        color: #e8eaed;
+        background: #1c1c1e;
+        color: #ffffff;
+      }
+
+      .header-icon {
+        background: linear-gradient(135deg, #0091ff, #007ae6);
+        box-shadow: 0 2px 6px rgba(0, 145, 255, 0.35);
       }
 
       .header-text h1 {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .header-text p {
-        color: #9aa0a6;
-      }
-
-      .search-section {
-        background: #1a1a1a;
-        border-bottom-color: #3d3d3d;
-      }
-
-      .gmail-search-bar {
-        background: #2d2d2d;
-      }
-
-      .gmail-search-bar:focus-within {
-        background: #242424;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 4px 8px 3px rgba(0,0,0,0.3);
-      }
-
-      .search-icon {
-        fill: #9aa0a6;
-      }
-
-      .gmail-search-bar input {
-        color: #e8eaed;
-      }
-
-      .gmail-search-bar input::placeholder {
-        color: #80868b;
+        color: #8e8e93;
       }
 
       .options-section {
-        border-bottom-color: #3d3d3d;
+        border-bottom-color: #383838;
       }
 
       .option-row:hover {
-        background: #242424;
+        background: #2c2c2e;
       }
 
       .option-label {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .toggle-slider {
-        background: #3d3d3d;
+        background: #3a3a3c;
       }
 
       .toggle-slider:before {
-        background: #9aa0a6;
+        background: #8e8e93;
       }
 
       .toggle input:checked + .toggle-slider {
-        background: #8ab4f8;
+        background: #30d158;
       }
 
       .toggle input:checked + .toggle-slider:before {
-        background: #1a1a1a;
+        background: #ffffff;
+      }
+
+      .btn-primary {
+        background: #0091ff;
+        color: #ffffff;
+      }
+
+      .btn-primary:not(:disabled):hover {
+        background: #007ae6;
       }
 
       .btn-primary:disabled {
-        background: #2d2d2d;
-        color: #6e6e6e;
+        background: #2c2c2e;
+        color: #636366;
       }
 
       .btn-secondary {
-        background: #2d2d2d;
-        color: #8ab4f8;
-        border-color: #3d3d3d;
+        background: #3a3a3c;
+        color: #0091ff;
+        border-color: #383838;
       }
 
       .btn-secondary:hover {
-        background: #3d3d3d;
-        border-color: #8ab4f8;
+        background: #444446;
+        border-color: #3cd3fe;
+        color: #3cd3fe;
       }
 
       .status.loading {
-        background: #1e3a5f;
-        color: #8ab4f8;
+        background: rgba(0, 145, 255, 0.15);
+        color: #3cd3fe;
+        border: 1px solid rgba(0, 145, 255, 0.3);
       }
 
       .status.success {
-        background: #1a3d2b;
-        color: #81c995;
+        background: rgba(48, 209, 88, 0.15);
+        color: #30d158;
+        border: 1px solid rgba(48, 209, 88, 0.3);
       }
 
       .status.error {
-        background: #3d1a1a;
-        color: #f28b82;
+        background: rgba(255, 66, 69, 0.15);
+        color: #ff4245;
+        border: 1px solid rgba(255, 66, 69, 0.3);
       }
 
       .status.warning {
-        background: #3d2e00;
-        color: #fdd663;
+        background: rgba(255, 159, 10, 0.15);
+        color: #ff9f0a;
+        border: 1px solid rgba(255, 159, 10, 0.3);
       }
 
       .results-section {
-        border-top-color: #3d3d3d;
-        background: #202020;
+        border-top-color: #383838;
+        background: #1e1e1e;
       }
 
       .result-item {
-        border-bottom-color: #3d3d3d;
+        border-bottom-color: #2c2c2e;
       }
 
       .result-label {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .result-value {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .result-value.path {
-        background: #1e3a5f;
-        color: #8ab4f8;
-        border-color: rgba(138, 180, 248, 0.15);
+        background: rgba(0, 145, 255, 0.15);
+        color: #3cd3fe;
+        border-color: rgba(0, 145, 255, 0.3);
       }
 
       .tag {
-        background: #2d2d2d;
-        color: #9aa0a6;
+        background: #2c2c2e;
+        color: #8e8e93;
+        border: 1px solid #383838;
       }
 
       .footer {
-        border-top-color: #3d3d3d;
-        background: #1a1a1a;
+        border-top-color: #383838;
+        background: #1c1c1e;
       }
 
       .footer a {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .footer a:hover {
-        color: #8ab4f8;
+        color: #0091ff;
       }
 
       .settings-cog:hover {
-        background-color: rgba(255, 255, 255, 0.08);
+        background-color: #2c2c2e;
       }
 
       .cog-icon {
-        fill: #9aa0a6;
+        fill: #8e8e93;
       }
 
       .settings-cog:hover .cog-icon {
-        fill: #8ab4f8;
+        fill: #0091ff;
       }
+    }
     }
   </style>
 </head>
@@ -583,21 +526,11 @@
   <!-- Header -->
   <div class="header">
     <div class="header-icon">
-      <svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+      <img src="icons/icon48.png" alt="AIJbookmarks">
     </div>
     <div class="header-text">
       <h1>AIJbookmarks</h1>
       <p>AI-powered bookmark organizer</p>
-    </div>
-  </div>
-
-  <!-- Gmail-style Pill Search Bar -->
-  <div class="search-section">
-    <div class="gmail-search-bar">
-      <svg class="search-icon" viewBox="0 0 24 24">
-        <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5 5.5-2.5-5.5-2.5zm7.5 5l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 14.5z"/>
-      </svg>
-      <input type="text" id="searchInput" placeholder="Show me all my bookmarks about drones">
     </div>
   </div>
 

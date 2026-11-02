@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     anthropicApiKey: '',
     openaiApiKey: '',
     openaiBaseUrl: 'https://api.openai.com/v1',
-    openaiModel: "",
+    openaiModel: '',
     openaiCustomModel: '',
     openrouterApiKey: '',
     openrouterModel: '',
@@ -46,15 +46,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUrl = tab.url;
     currentTitle = tab.title;
   }
-
-  document.getElementById('searchInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const query = e.target.value.trim();
-      if (query) {
-        chrome.tabs.create({ url: chrome.runtime.getURL('search.html') + '?q=' + encodeURIComponent(query) });
-      }
-    }
-  });
 
   function isMacOrIOS() {
     return /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.platform === 'MacIntel';

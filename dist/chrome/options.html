@@ -33,6 +33,15 @@
     }
     .sidebar-header {
       margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sidebar-header img {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
     .sidebar-header h1 {
       font-size: 20px;
@@ -509,232 +518,306 @@
     .stale-input { width: 80px; padding: 6px 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; font-family: inherit; }
     .stale-input:focus { outline: none; border-color: #1a73e8; }
     .stale-unit { font-size: 13px; color: #202124; }
+    /* Apple HIG Dark Mode Styles */
     @media (prefers-color-scheme: dark) {
       body {
-        background: #1a1a1a;
-        color: #e8eaed;
+        background: #1c1c1e;
+        color: #ffffff;
+      }
+
+      .sidebar {
+        background: #1c1c1e;
+        border-right-color: #383838;
       }
 
       .sidebar-header h1 {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .sidebar-header p {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .nav-item {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .nav-item:hover {
-        background: #3d3d3d;
-        color: #e8eaed;
+        background: #2c2c2e;
+        color: #ffffff;
       }
 
       .nav-item.active {
-        background: #1e3a5f;
-        color: #8ab4f8;
+        background: rgba(0, 145, 255, 0.18);
+        color: #3cd3fe;
+        font-weight: 500;
       }
 
       .header h1 {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .header p {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .card {
-        background: #242424;
-        border-color: #3d3d3d;
+        background: #1e1e1e;
+        border-color: #383838;
       }
 
       .card-header {
-        border-bottom-color: #3d3d3d;
+        border-bottom-color: #383838;
       }
 
       .card-title {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .form-label {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .form-hint {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .form-hint a {
-        color: #8ab4f8;
+        color: #0091ff;
       }
 
       .form-input {
-        background: #333333;
-        color: #e8eaed;
-        border-color: #3d3d3d;
+        background: #2c2c2e;
+        color: #ffffff;
+        border-color: #383838;
       }
 
       .form-input:focus {
-        border-color: #8ab4f8;
-        box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.2);
+        border-color: #0091ff;
+        box-shadow: 0 0 0 2px rgba(0, 145, 255, 0.25);
       }
 
       .form-input::placeholder {
-        color: #6e6e6e;
+        color: #636366;
       }
 
       .form-input-select {
-        background-color: #333333;
-        color: #e8eaed;
-        border-color: #3d3d3d;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%239aa0a6'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+        background-color: #2c2c2e;
+        color: #ffffff;
+        border-color: #383838;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%238e8e93'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
       }
 
       .form-input-select:focus {
-        border-color: #8ab4f8;
-        box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.2);
+        border-color: #0091ff;
+        box-shadow: 0 0 0 2px rgba(0, 145, 255, 0.25);
       }
 
       .form-input-select:disabled {
-        background-color: #2d2d2d;
-        color: #6e6e6e;
+        background-color: #2c2c2e;
+        color: #636366;
       }
 
       .provider-tabs {
-        border-color: #3d3d3d;
+        border-color: #383838;
       }
 
       .provider-tab {
-        background: #2d2d2d;
-        color: #9aa0a6;
-        border-right-color: #3d3d3d;
+        background: #2c2c2e;
+        color: #8e8e93;
+        border-right-color: #383838;
       }
 
       .provider-tab:not(.active):hover {
-        background: #3d3d3d;
-        color: #e8eaed;
+        background: #3a3a3c;
+        color: #ffffff;
+      }
+
+      .provider-tab.active {
+        background: #0091ff;
+        color: #ffffff;
+      }
+
+      .btn-primary {
+        background: #0091ff;
+        color: #ffffff;
+      }
+
+      .btn-primary:not(:disabled):hover {
+        background: #007ae6;
       }
 
       .btn-secondary {
-        background: #2d2d2d;
-        color: #9aa0a6;
-        border-color: #3d3d3d;
+        background: #3a3a3c;
+        color: #ffffff;
+        border-color: #383838;
       }
 
       .btn-secondary:hover {
-        background: #3d3d3d;
-        color: #e8eaed;
+        background: #444446;
+        color: #3cd3fe;
+        border-color: #3cd3fe;
       }
 
       .btn-load {
-        background: #2d2d2d;
-        color: #8ab4f8;
-        border-color: #3d3d3d;
+        background: #2c2c2e;
+        color: #0091ff;
+        border-color: #383838;
       }
 
       .btn-load:hover {
-        background: #3d3d3d;
+        background: #3a3a3c;
+        color: #3cd3fe;
+      }
+
+      .toggle-slider {
+        background: #3a3a3c;
+      }
+
+      .toggle-slider:before {
+        background: #8e8e93;
+      }
+
+      .toggle input:checked + .toggle-slider {
+        background: #30d158;
+      }
+
+      .toggle input:checked + .toggle-slider:before {
+        background: #ffffff;
       }
 
       .toggle-label {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .rule-item {
-        border-bottom-color: #3d3d3d;
+        border-bottom-color: #383838;
       }
 
       .rule-domain {
-        background: #1e3a5f;
-        color: #8ab4f8;
+        background: rgba(0, 145, 255, 0.15);
+        color: #3cd3fe;
       }
 
       .rule-arrow {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .rule-folder {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .stale-unit {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .stale-input {
-        background: #333333;
-        color: #e8eaed;
-        border-color: #3d3d3d;
+        background: #2c2c2e;
+        color: #ffffff;
+        border-color: #383838;
       }
 
       .interval-tabs {
-        border-color: #3d3d3d;
+        border-color: #383838;
       }
 
       .interval-tab {
-        background: #2d2d2d;
-        color: #9aa0a6;
+        background: #2c2c2e;
+        color: #8e8e93;
       }
 
       .interval-tab:not(:last-child) {
-        border-right-color: #3d3d3d;
+        border-right-color: #383838;
       }
 
       .interval-tab:not(.active):hover {
-        background: #3d3d3d;
-        color: #e8eaed;
+        background: #3a3a3c;
+        color: #ffffff;
+      }
+
+      .interval-tab.active {
+        background: #0091ff;
+        color: #ffffff;
       }
 
       .status.loading {
-        background: #1e3a5f;
-        color: #8ab4f8;
+        background: rgba(0, 145, 255, 0.15);
+        color: #3cd3fe;
+        border: 1px solid rgba(0, 145, 255, 0.3);
       }
 
       .active-provider-indicator {
-        background: #1e3a5f;
-        border-color: rgba(138, 180, 248, 0.2);
-        color: #e8eaed;
+        background: rgba(0, 145, 255, 0.12);
+        border-color: rgba(0, 145, 255, 0.25);
+        color: #ffffff;
       }
 
       .active-provider-badge {
-        background: #8ab4f8;
-        color: #1a1a1a;
+        background: #0091ff;
+        color: #ffffff;
       }
 
       .info-card {
-        background: #1e3a5f;
+        background: rgba(0, 145, 255, 0.12);
+        border-color: rgba(0, 145, 255, 0.3);
       }
 
       .info-card .info-title {
-        color: #8ab4f8;
+        color: #3cd3fe;
       }
 
       .info-card p {
-        color: #8ab4f8;
+        color: #aeaeb2;
       }
 
       .warning-card {
-        background: #3d2e00;
+        background: rgba(255, 159, 10, 0.12);
+        border-color: rgba(255, 159, 10, 0.3);
       }
 
       .warning-card .warning-title {
-        color: #fdd663;
+        color: #ff9f0a;
       }
 
       .warning-card p {
-        color: #fdd663;
+        color: #aeaeb2;
       }
 
       .status.success {
-        background: #1a3d2b;
-        color: #81c995;
+        background: rgba(48, 209, 88, 0.15);
+        color: #30d158;
+        border: 1px solid rgba(48, 209, 88, 0.3);
       }
 
       .status.error {
-        background: #3d1a1a;
-        color: #f28b82;
+        background: rgba(255, 66, 69, 0.15);
+        color: #ff4245;
+        border: 1px solid rgba(255, 66, 69, 0.3);
+      }
+
+      .badge.info {
+        background: rgba(0, 145, 255, 0.2);
+        color: #3cd3fe;
+      }
+
+      .badge.success {
+        background: rgba(48, 209, 88, 0.2);
+        color: #30d158;
+      }
+
+      .badge.warning {
+        background: rgba(255, 159, 10, 0.2);
+        color: #ff9f0a;
+      }
+
+      .badge.danger, .badge.required {
+        background: rgba(255, 66, 69, 0.2);
+        color: #ff4245;
+      }
+
+      .model-loaded-badge {
+        background: #30d158;
+        color: #ffffff;
       }
     }
   </style>
@@ -744,11 +827,15 @@
   <div class="page-container">
     <div class="sidebar">
       <div class="sidebar-header">
-        <h1>AIJbookmarks</h1>
-        <p>Settings</p>
+        <img src="icons/icon48.png" alt="AIJbookmarks">
+        <div>
+          <h1>AIJbookmarks</h1>
+          <p>Settings</p>
+        </div>
       </div>
       <nav class="nav-menu">
         <a class="nav-item active" data-section="section-provider">AI Provider</a>
+        <a class="nav-item" data-section="section-local-models">Local AI Models (EmbeddingGemma)</a>
         <a class="nav-item" data-section="section-integrations">Integrations</a>
         <a class="nav-item" data-section="section-rules">Domain Rules</a>
         <a class="nav-item" data-section="section-health">Health Checks</a>
@@ -960,7 +1047,7 @@
           <div class="form-group">
             <label class="form-label" for="contextWindowSlider">Model Context Window (tokens)</label>
             <div class="form-hint">
-              Used to size batch analysis and semantic search. Uses strictly binary amounts (powers of 2) to ensure valid context sizing.
+              Used to size batch analysis and bookmark organization. Uses strictly binary amounts (powers of 2) to ensure valid context sizing.
             </div>
             <div class="model-row" style="margin-bottom: 12px;">
               <select id="modelContextWindowPreset" name="modelContextWindowPreset" class="form-input-select">
@@ -1010,6 +1097,271 @@
       </div>
 
       </div>
+
+      <!-- Local AI Models Section -->
+      <div id="section-local-models" class="settings-section">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Local AI Model (EmbeddingGemma-2)</span>
+            <span class="badge optional">On-Device AI</span>
+          </div>
+          <div class="card-body">
+            <p style="margin-bottom: 20px; color: #5f6368; line-height: 1.6;">
+              Run Google's EmbeddingGemma-2 universal GGUF model directly on-device for high-precision, zero-latency vector embedding, cosine similarity matching, and bookmark sorting. Everything runs 100% locally with complete privacy &mdash; only embedding models supported, no cloud API keys, and no subscriptions.
+            </p>
+
+            <!-- Default EmbeddingGemma-2 Model Card -->
+            <div class="model-card" style="border: 1px solid #dadce0; border-radius: 8px; padding: 20px; background: #fafafa; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                <div>
+                  <h3 style="font-size: 15px; font-weight: 600; color: #202124; margin-bottom: 4px;">EmbeddingGemma-2 (UD-Q4_K_XL)</h3>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                    <span class="badge" style="background: #e8f0fe; color: #1a73e8;">GGUF UD-Q4_K_XL</span>
+                    <span class="badge" style="background: #e6f4ea; color: #137333;">768 Dims (Matryoshka to 256)</span>
+                    <span class="badge" style="background: #fef7e0; color: #b06000;">Embedding Only</span>
+                    <span class="badge" style="background: #f1f3f4; color: #5f6368;">~168 MB</span>
+                    <span class="badge" style="background: #f3e8fd; color: #7627bb;">Unsloth / Google</span>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="modelLoadedIndicator" style="display: none; width: 10px; height: 10px; border-radius: 50%; background: #137333; box-shadow: 0 0 6px rgba(19, 115, 51, 0.6);" title="Model Loaded in Memory"></span>
+                  <span id="modelStatusBadge" class="badge" style="background: #f1f3f4; color: #5f6368; font-size: 12px; padding: 4px 10px;">Checking status...</span>
+                </div>
+              </div>
+
+              <p style="font-size: 13px; color: #5f6368; margin-bottom: 16px; line-height: 1.5;">
+                Universal on-device GGUF embedding model quantized by Unsloth. Produces 768-dimensional dense vector embeddings with optional Matryoshka dimension truncation (768 to 256 dimensions with L2 re-normalization) and cosine similarity ranking.
+              </p>
+
+              <div style="margin-bottom: 16px; font-size: 12px; color: #5f6368;">
+                <span>Source: </span>
+                <a href="https://huggingface.co/unsloth/embeddinggemma-2-GGUF/resolve/main/embeddinggemma-2-UD-Q4_K_XL.gguf" target="_blank" rel="noopener" style="color: #1a73e8; text-decoration: none;">
+                  huggingface.co/unsloth/embeddinggemma-2-GGUF &nearr;
+                </a>
+              </div>
+
+              <!-- Context Window Slider Card -->
+              <div class="context-slider-card" style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 13px; font-weight: 500; color: #202124;">Model Context Window</span>
+                  <span id="localContextValueDisplay" class="badge" style="background: #e8f0fe; color: #1967d2; font-family: 'Roboto Mono', monospace; font-size: 12px; padding: 4px 10px; border-radius: 4px; border: 1px solid #dadce0;">8K (8,192 tokens)</span>
+                </div>
+                <input
+                  type="range"
+                  id="localModelContextSlider"
+                  class="context-slider"
+                  min="0"
+                  max="5"
+                  step="1"
+                  value="2"
+                  style="width: 100%; cursor: pointer; accent-color: #1a73e8;"
+                >
+                <div class="slider-ticks" style="position: relative; height: 16px; font-size: 11px; color: #5f6368; margin-top: 6px; font-family: 'Roboto Mono', monospace; user-select: none;">
+                  <span style="position: absolute; left: 0%; transform: translateX(0%);">2K</span>
+                  <span style="position: absolute; left: 20%; transform: translateX(-50%);">4K</span>
+                  <span style="position: absolute; left: 40%; transform: translateX(-50%);">8K</span>
+                  <span style="position: absolute; left: 60%; transform: translateX(-50%);">16K</span>
+                  <span style="position: absolute; left: 80%; transform: translateX(-50%);">32K</span>
+                  <span style="position: absolute; left: 100%; transform: translateX(-100%);">64K</span>
+                </div>
+              </div>
+
+              <!-- Download Progress Container -->
+              <div id="modelProgressContainer" style="display: none; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #5f6368;">
+                  <span id="modelProgressPercent">0%</span>
+                  <span id="modelProgressStats">0 MB / 168 MB &bull; 0 MB/s &bull; ETA: --</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                  <div id="modelProgressBar" style="width: 0%; height: 100%; background: #1a73e8; transition: width 0.2s ease;"></div>
+                </div>
+              </div>
+
+              <!-- Error Box -->
+              <div id="modelErrorBox" style="display: none; padding: 12px; background: #fce8e6; color: #c5221f; border-radius: 6px; font-size: 12px; margin-bottom: 16px;"></div>
+
+              <!-- Model Action Buttons -->
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button type="button" id="btnDownloadModel" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Model (~168 MB)
+                </button>
+                <button type="button" id="btnCancelModelDownload" class="btn btn-secondary" style="display: none;">
+                  Cancel Download
+                </button>
+                <button type="button" id="btnLoadModel" class="btn btn-primary" style="display: none; background: #137333;">
+                  Load Model
+                </button>
+                <button type="button" id="btnUnloadModel" class="btn btn-secondary" style="display: none;">
+                  Unload Model
+                </button>
+                <button type="button" id="btnTestModel" class="btn btn-secondary" style="display: none;">
+                  Test EmbeddingGemma Model
+                </button>
+                <button type="button" id="btnDeleteModel" class="btn btn-remove" style="display: none; padding: 8px 16px;">
+                  Delete Model
+                </button>
+              </div>
+              <p id="modelStatusHint" style="font-size: 12px; color: #5f6368; margin-top: 10px; line-height: 1.4;"></p>
+            </div>
+
+            <!-- Custom On-Device LLM (URL) Card (Hidden: only embedding models supported) -->
+            <div class="model-card" id="customLLMCardContainer" style="display: none; border: 1px solid #dadce0; border-radius: 8px; padding: 20px; background: #fafafa; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <h3 id="customLLMTitle" style="font-size: 15px; font-weight: 600; color: #202124; margin-bottom: 4px;">Custom On-Device LLM (URL)</h3>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                    <span class="badge" style="background: #e8f0fe; color: #1a73e8;" id="customLLMFormatBadge">GGUF</span>
+                    <span class="badge" style="background: #e6f4ea; color: #137333;" id="customLLMTypeBadge">LLM / Instruct (Non-Embedding)</span>
+                    <span class="badge" style="background: #f1f3f4; color: #5f6368;" id="customLLMSizeBadge">Custom URL</span>
+                  </div>
+                </div>
+                <span id="customLLMStatusBadge" class="badge" style="background: #f1f3f4; color: #5f6368; font-size: 12px; padding: 4px 10px;">Not Downloaded</span>
+              </div>
+
+              <p style="font-size: 13px; color: #5f6368; margin-bottom: 14px; line-height: 1.5;">
+                Download and run any custom GGUF LLM or instruct model directly via URL (e.g. from Hugging Face). Uses <code>node-llama-cpp</code> on-device inference for intelligent bookmark sorting and organization.
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                <div>
+                  <label for="customLLMUrl" class="form-label" style="margin-bottom: 4px;">LLM Download URL (GGUF direct link)</label>
+                  <input type="url" id="customLLMUrl" class="form-input mono" placeholder="https://huggingface.co/.../resolve/main/model-Q5_K_M.gguf" autocomplete="off" spellcheck="false">
+                  <div class="form-hint" style="margin-top: 4px; font-size: 11px;">
+                    Enter a direct download URL to any GGUF LLM (e.g. MiniCPM, Llama-3.2, Qwen2.5, Mistral, Gemma, Phi).
+                  </div>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                  <div style="flex: 2; min-width: 180px;">
+                    <label for="customLLMName" class="form-label" style="margin-bottom: 4px;">Model Name (optional)</label>
+                    <input type="text" id="customLLMName" class="form-input" placeholder="e.g. Custom-LLM-Instruct" autocomplete="off">
+                  </div>
+                  <div style="flex: 1; min-width: 120px;">
+                    <label for="customLLMContext" class="form-label" style="margin-bottom: 4px;">Context Window</label>
+                    <input type="number" id="customLLMContext" class="form-input" value="32768" min="512" max="131072" step="1024">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Download Progress Container -->
+              <div id="customLLMProgressContainer" style="display: none; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #5f6368;">
+                  <span id="customLLMProgressPercent">0%</span>
+                  <span id="customLLMProgressStats">0 MB / 0 MB &bull; 0 MB/s &bull; ETA: --</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                  <div id="customLLMProgressBar" style="width: 0%; height: 100%; background: #1a73e8; transition: width 0.2s ease;"></div>
+                </div>
+              </div>
+
+              <!-- Error Box -->
+              <div id="customLLMErrorBox" style="display: none; padding: 12px; background: #fce8e6; color: #c5221f; border-radius: 6px; font-size: 12px; margin-bottom: 16px;"></div>
+
+              <!-- Model Action Buttons -->
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button type="button" id="btnDownloadCustomLLM" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Custom LLM
+                </button>
+                <button type="button" id="btnCancelCustomLLMDownload" class="btn btn-secondary" style="display: none;">
+                  Cancel Download
+                </button>
+                <button type="button" id="btnLoadCustomLLM" class="btn btn-primary" style="display: none; background: #137333;">
+                  Load Model
+                </button>
+                <button type="button" id="btnUnloadCustomLLM" class="btn btn-secondary" style="display: none;">
+                  Unload Model
+                </button>
+                <button type="button" id="btnTestCustomLLM" class="btn btn-secondary" style="display: none;">
+                  Test Custom LLM
+                </button>
+                <button type="button" id="btnDeleteCustomLLM" class="btn btn-remove" style="display: none; padding: 8px 16px;">
+                  Delete Model
+                </button>
+              </div>
+              <p id="customLLMStatusHint" style="font-size: 12px; color: #5f6368; margin-top: 10px; line-height: 1.4;"></p>
+            </div>
+
+            <!-- Custom GGUF Embedding Model Card -->
+            <div class="model-card" style="border: 1px solid #dadce0; border-radius: 8px; padding: 20px; background: #fafafa; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <h3 id="customModelTitle" style="font-size: 15px; font-weight: 600; color: #202124; margin-bottom: 4px;">Custom Embedding Model</h3>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                    <span class="badge" style="background: #e8f0fe; color: #1a73e8;" id="customModelFormatBadge">GGUF</span>
+                    <span class="badge" style="background: #fef7e0; color: #b06000;" id="customModelDimsBadge">1024 Dimensions</span>
+                    <span class="badge" style="background: #f1f3f4; color: #5f6368;" id="customModelSizeBadge">Custom URL</span>
+                  </div>
+                </div>
+                <span id="customModelStatusBadge" class="badge" style="background: #f1f3f4; color: #5f6368; font-size: 12px; padding: 4px 10px;">Not Downloaded</span>
+              </div>
+
+              <p style="font-size: 13px; color: #5f6368; margin-bottom: 14px; line-height: 1.5;">
+                Download and run any custom GGUF embedding model directly in your browser. Provide a direct download link (e.g. from Hugging Face).
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                <div>
+                  <label for="customModelUrl" class="form-label" style="margin-bottom: 4px;">Model Download URL (GGUF direct link)</label>
+                  <input type="url" id="customModelUrl" class="form-input mono" placeholder="https://huggingface.co/.../resolve/main/model-Q5_K_M.gguf" autocomplete="off" spellcheck="false">
+                  <div class="form-hint" style="margin-top: 4px; font-size: 11px;">
+                    Enter a direct download URL. For Hugging Face, copy the download link or append <code>?download=true</code> to the file URL.
+                  </div>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                  <div style="flex: 2; min-width: 180px;">
+                    <label for="customModelName" class="form-label" style="margin-bottom: 4px;">Model Name (optional)</label>
+                    <input type="text" id="customModelName" class="form-input" placeholder="e.g. Custom-Embedding-Model" autocomplete="off">
+                  </div>
+                  <div style="flex: 1; min-width: 120px;">
+                    <label for="customModelDimensions" class="form-label" style="margin-bottom: 4px;">Embedding Dimensions</label>
+                    <input type="number" id="customModelDimensions" class="form-input" value="1024" min="32" max="8192" step="32">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Download Progress Container -->
+              <div id="customModelProgressContainer" style="display: none; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #5f6368;">
+                  <span id="customModelProgressPercent">0%</span>
+                  <span id="customModelProgressStats">0 MB / 0 MB &bull; 0 MB/s &bull; ETA: --</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                  <div id="customModelProgressBar" style="width: 0%; height: 100%; background: #1a73e8; transition: width 0.2s ease;"></div>
+                </div>
+              </div>
+
+              <!-- Error Box -->
+              <div id="customModelErrorBox" style="display: none; padding: 12px; background: #fce8e6; color: #c5221f; border-radius: 6px; font-size: 12px; margin-bottom: 16px;"></div>
+
+              <!-- Model Action Buttons -->
+              <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button type="button" id="btnDownloadCustomModel" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Custom Model
+                </button>
+                <button type="button" id="btnCancelCustomModelDownload" class="btn btn-secondary" style="display: none;">
+                  Cancel Download
+                </button>
+                <button type="button" id="btnLoadCustomModel" class="btn btn-primary" style="display: none; background: #137333;">
+                  Load Model
+                </button>
+                <button type="button" id="btnUnloadCustomModel" class="btn btn-secondary" style="display: none;">
+                  Unload Model
+                </button>
+                <button type="button" id="btnTestCustomModel" class="btn btn-secondary" style="display: none;">
+                  Test Custom Model
+                </button>
+                <button type="button" id="btnDeleteCustomModel" class="btn btn-remove" style="display: none; padding: 8px 16px;">
+                  Delete Model
+                </button>
+              </div>
+              <p id="customModelStatusHint" style="font-size: 12px; color: #5f6368; margin-top: 10px; line-height: 1.4;"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="section-integrations" class="settings-section">
       <div class="card">
         <div class="card-header">
@@ -1330,6 +1682,7 @@
     </div>
   </div>
 
+  <script src="model-manager.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

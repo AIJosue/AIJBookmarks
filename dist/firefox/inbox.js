@@ -49,13 +49,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (inboxNewFolderLocation) {
-    inboxNewFolderLocation.value = settings.sortNewFolderLocation || 'root-bar';
     inboxNewFolderLocation.addEventListener('change', (e) => {
       chrome.storage.sync.set({ sortNewFolderLocation: e.target.value });
     });
   }
 
-  await loadSortingScopeFolders();
+  await loadSortingScopeFolders(settings.sortNewFolderLocation);
   await loadUnsortedBookmarks();
 
   // Delegated listener — handles all checkbox changes without per-row binding
@@ -83,7 +82,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('applyBtn').addEventListener('click', applySelected);
   document.getElementById('sortScopeMode').addEventListener('change', handleScopeModeChange);
   document.getElementById('sortFolderSelect').addEventListener('change', handleFolderScopeChange);
-  document.getElementById('refreshScopeBtn').addEventListener('click', () => loadUnsortedBookmarks());
+  document.getElementById('refreshScopeBtn').addEventListener('click', async () => {
+    const settings = await chrome.storage.sync.get({ sortNewFolderLocation: 'root-bar' });
+    await loadSortingScopeFolders(settings.sortNewFolderLocation);
+    await loadUnsortedBookmarks();
+  });
   document.getElementById('selectAll').addEventListener('change', (e) => {
     for (const [id, row] of rowsById.entries()) {
       if (!row.checkbox.disabled) {
@@ -98,72 +101,313 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   const aiConfig = await chrome.runtime.sendMessage({ action: 'checkAIConfig' }).catch(() => null);
-  if (aiConfig && !aiConfig.hasAI) {
+  const sortModelSelect = document.getElementById('sortModelSelect');
+  const sortBadge = document.getElementById('localEmbeddingSortBadge');
+  const sortCheckbox = document.getElementById('useLocalEmbeddingsSort');
+
+  function initSortModelSelector(config) {
+    if (!sortModelSelect) return;
+    sortModelSelect.innerHTML = '';
+
+    const models = config?.availableModels || [];
+    let selectedValue = 'auto';
+
+    // 1. If any model is loaded, preselect it!
+    const loadedModel = models.find(m => m.isLoaded);
+    if (loadedModel) {
+      selectedValue = loadedModel.id;
+    } else if (config?.loadedModelId) {
+      selectedValue = config.loadedModelId;
+    } else if (config?.hasCloudAI) {
+      selectedValue = 'cloud';
+    } else {
+      selectedValue = 'embeddinggemma-2';
+    }
+
+    // Populate dropdown options with available models
+    for (const m of models) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      const statusText = m.isLoaded ? ' • Loaded & Active' : (m.status === 'downloaded' ? ' • Downloaded' : '');
+      opt.textContent = `${m.name}${statusText}`;
+      if (m.id === selectedValue) {
+        opt.selected = true;
+      }
+      sortModelSelect.appendChild(opt);
+    }
+
+    // If Cloud AI is configured, also list it
+    if (config?.hasCloudAI) {
+      const optCloud = document.createElement('option');
+      optCloud.value = 'cloud';
+      const providerName = config?.cloudProvider ? config.cloudProvider.toUpperCase() : 'Cloud API';
+      optCloud.textContent = `☁️ ${providerName} (Cloud AI)`;
+      if (selectedValue === 'cloud') {
+        optCloud.selected = true;
+      }
+      sortModelSelect.appendChild(optCloud);
+    }
+
+    function refreshSortModelBadge() {
+      const currentVal = sortModelSelect.value;
+      if (currentVal === 'cloud') {
+        if (sortBadge) {
+          sortBadge.textContent = '☁️ Cloud API Active';
+          sortBadge.style.background = '#e8f0fe';
+          sortBadge.style.color = '#1a73e8';
+          sortBadge.style.display = 'inline-block';
+        }
+        if (sortCheckbox) sortCheckbox.checked = false;
+        return;
+      }
+
+      if (sortCheckbox) sortCheckbox.checked = true;
+      const chosenModel = models.find(m => m.id === currentVal);
+      if (chosenModel?.isLoaded) {
+        if (sortBadge) {
+          sortBadge.textContent = `🧠 ${chosenModel.name.split(' ')[0]} Loaded (Offline)`;
+          sortBadge.style.background = '#e6f4ea';
+          sortBadge.style.color = '#137333';
+          sortBadge.style.display = 'inline-block';
+        }
+      } else if (chosenModel?.status === 'downloaded') {
+        if (sortBadge) {
+          sortBadge.textContent = 'Downloaded (Loads on sort)';
+          sortBadge.style.background = '#fef7e0';
+          sortBadge.style.color = '#b06000';
+          sortBadge.style.display = 'inline-block';
+        }
+      } else {
+        if (sortBadge) {
+          sortBadge.textContent = 'Built-in Fallback';
+          sortBadge.style.background = '#f1f3f4';
+          sortBadge.style.color = '#5f6368';
+          sortBadge.style.display = 'inline-block';
+        }
+      }
+    }
+
+    sortModelSelect.addEventListener('change', () => {
+      refreshSortModelBadge();
+      const currentVal = sortModelSelect.value;
+      if (currentVal !== 'cloud' && currentVal !== 'auto') {
+        chrome.runtime.sendMessage({ action: 'loadModel', modelId: currentVal }).catch(() => {});
+      }
+    });
+
+    refreshSortModelBadge();
+  }
+
+  initSortModelSelector(aiConfig);
+
+  const activeModelName = aiConfig?.loadedModelName || 'EmbeddingGemma-2';
+  if (aiConfig && !aiConfig.hasAI && !aiConfig.hasLocalAI) {
     const alertBox = document.getElementById('alertBox');
     if (alertBox && bookmarks.length > 0) {
       alertBox.className = 'alert alert-info';
-      alertBox.innerHTML = '⚠️ <strong>AI Provider not configured.</strong> Please open <a href="#" id="openSettingsAlertLink" style="color:#1a73e8;font-weight:600;text-decoration:underline;">Extension Settings</a> and enter your API key to enable AI sorting.';
+      alertBox.innerHTML = `ℹ️ Using <strong>built-in ${activeModelName} engine</strong> for bookmark sorting. For full model weights, <a href="#" id="openSettingsAlertLink" style="color:#1a73e8;font-weight:600;text-decoration:underline;">download in Settings</a>.`;
       document.getElementById('openSettingsAlertLink')?.addEventListener('click', (e) => {
         e.preventDefault();
         chrome.runtime.openOptionsPage();
       });
     }
+  } else if (aiConfig?.hasLocalAI && !aiConfig?.hasCloudAI) {
+    const alertBox = document.getElementById('alertBox');
+    if (alertBox && bookmarks.length > 0 && alertBox.classList.contains('alert-loading')) {
+      alertBox.className = 'alert alert-info';
+      alertBox.innerHTML = `🧠 <strong>Local ${activeModelName} Model Active.</strong> Bookmarks will be organized on-device without cloud API keys.`;
+    }
   }
 });
 
-async function loadSortingScopeFolders() {
+async function fetchSortingScopeFoldersDirectly() {
+  if (!chrome?.bookmarks?.getTree) return [];
+  try {
+    const tree = await chrome.bookmarks.getTree();
+    const rootNode = tree?.[0];
+    if (!rootNode) return [];
+
+    const rootOrder = ['Bookmarks Toolbar', 'Bookmarks Bar', 'Bookmarks Menu', 'Other Bookmarks', 'Mobile Bookmarks'];
+    function getRootLabel(nodeId, title) {
+      const sId = String(nodeId);
+      if (sId === 'toolbar_____' || sId === '1') return 'Bookmarks Toolbar';
+      if (sId === 'menu________') return 'Bookmarks Menu';
+      if (sId === 'unfiled_____' || sId === '2') return 'Other Bookmarks';
+      if (sId === 'mobile______' || sId === '3') return 'Mobile Bookmarks';
+      return title || 'Bookmarks';
+    }
+
+    const folders = [];
+    for (const rootChild of rootNode.children || []) {
+      if (rootChild.url) continue;
+      const rootId = String(rootChild.id);
+      const rootLabel = getRootLabel(rootId, rootChild.title);
+      const directBookmarks = (rootChild.children || []).filter(c => Boolean(c.url));
+
+      folders.push({
+        id: rootId,
+        title: rootLabel,
+        path: rootLabel,
+        rootName: rootLabel,
+        depth: 0,
+        isRoot: true,
+        directBookmarkCount: directBookmarks.length
+      });
+
+      function walkSub(children, parentPath, depth) {
+        for (const node of children || []) {
+          if (node.url) continue;
+          const title = node.title || 'Untitled folder';
+          const lower = title.toLowerCase();
+          if (lower === 'mozilla firefox' || lower === 'firefox') continue;
+          const canonicalPath = `${parentPath}/${title}`;
+          folders.push({
+            id: String(node.id),
+            title,
+            path: canonicalPath,
+            rootName: rootLabel,
+            depth,
+            isRoot: false,
+            directBookmarkCount: (node.children || []).filter(c => Boolean(c.url)).length
+          });
+          if (node.children && node.children.length > 0) {
+            walkSub(node.children, canonicalPath, depth + 1);
+          }
+        }
+      }
+
+      if (rootChild.children && rootChild.children.length > 0) {
+        walkSub(rootChild.children, rootLabel, 1);
+      }
+    }
+
+    return folders.sort((a, b) => {
+      if (a.rootName !== b.rootName) {
+        const idxA = rootOrder.indexOf(a.rootName);
+        const idxB = rootOrder.indexOf(b.rootName);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.rootName.localeCompare(b.rootName);
+      }
+      if (a.isRoot && !b.isRoot) return -1;
+      if (!a.isRoot && b.isRoot) return 1;
+      return a.path.localeCompare(b.path);
+    });
+  } catch (err) {
+    console.warn('Direct bookmark tree query failed:', err);
+    return [];
+  }
+}
+
+async function loadSortingScopeFolders(savedNewFolderLocation = null) {
   const select = document.getElementById('sortFolderSelect');
   const datalist = document.getElementById('existingFoldersList');
   const inboxNewFolderSelect = document.getElementById('inboxNewFolderLocation');
 
   try {
-    const response = await chrome.runtime.sendMessage({ action: 'getSortingScopeFolders' });
-    if (!response?.success) throw new Error(response?.error || 'Could not load folders');
+    let folderList = [];
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'getSortingScopeFolders' });
+      if (response?.success && Array.isArray(response.folders) && response.folders.length > 0) {
+        folderList = response.folders;
+      }
+    } catch {
+      // Fallback to direct query below
+    }
+
+    if (folderList.length === 0) {
+      folderList = await fetchSortingScopeFoldersDirectly();
+    }
+
+    const curSelectedFolder = select.value;
     select.textContent = '';
     if (datalist) datalist.textContent = '';
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = 'Choose a folder…';
+    placeholder.textContent = 'Choose a folder or subfolder…';
     select.appendChild(placeholder);
 
     if (inboxNewFolderSelect) {
-      const curVal = inboxNewFolderSelect.value || 'root-bar';
+      const curVal = savedNewFolderLocation || inboxNewFolderSelect.value || 'root-bar';
       inboxNewFolderSelect.textContent = '';
       const optBar = document.createElement('option');
       optBar.value = 'root-bar';
-      optBar.textContent = 'Bookmarks Bar';
+      optBar.textContent = 'Bookmarks Bar / Toolbar';
       inboxNewFolderSelect.appendChild(optBar);
-
-      const optOther = document.createElement('option');
-      optOther.value = 'root-other';
-      optOther.textContent = 'Other Bookmarks';
-      inboxNewFolderSelect.appendChild(optOther);
 
       const optMenu = document.createElement('option');
       optMenu.value = 'root-menu';
       optMenu.textContent = 'Bookmarks Menu';
       inboxNewFolderSelect.appendChild(optMenu);
 
-      for (const folder of response.folders || []) {
+      const optOther = document.createElement('option');
+      optOther.value = 'root-other';
+      optOther.textContent = 'Other Bookmarks';
+      inboxNewFolderSelect.appendChild(optOther);
+
+      for (let nfi = 0; nfi < folderList.length; nfi++) {
+        const folder = folderList[nfi];
+        if (folder.isRoot) continue;
         const opt = document.createElement('option');
         opt.value = folder.id;
-        opt.textContent = folder.path;
+        // Build tree indent matching the main dropdown
+        let treePrefix = '';
+        if (folder.depth > 0) {
+          const isLast = !folderList.slice(nfi + 1).some(
+            f => f.rootName === folder.rootName && f.depth === folder.depth && f.path.split('/').slice(0, -1).join('/') === folder.path.split('/').slice(0, -1).join('/')
+          );
+          treePrefix = '\u00A0\u00A0\u00A0\u00A0'.repeat(folder.depth - 1) + (isLast ? '└─ ' : '├─ ');
+        }
+        const leafName = folder.title || folder.path.split('/').pop() || folder.path;
+        opt.textContent = `${folder.rootName ? `[${folder.rootName}] ` : ''}${treePrefix}${leafName}`;
         inboxNewFolderSelect.appendChild(opt);
       }
-      inboxNewFolderSelect.value = curVal;
+      if (curVal) {
+        inboxNewFolderSelect.value = curVal;
+      }
     }
 
-    for (const folder of response.folders || []) {
+    for (let fi = 0; fi < folderList.length; fi++) {
+      const folder = folderList[fi];
       const option = document.createElement('option');
       option.value = folder.id;
-      option.textContent = `${folder.path} (${folder.directBookmarkCount} direct bookmark${folder.directBookmarkCount === 1 ? '' : 's'})`;
+      const countLabel = `(${folder.directBookmarkCount} direct bookmark${folder.directBookmarkCount === 1 ? '' : 's'})`;
+
+      // Build natural nested tree indentation
+      let prefix = '';
+      if (folder.isRoot) {
+        prefix = '📁 ';
+      } else if (folder.depth > 0) {
+        // Check if this is the last sibling at this depth within the same root
+        const isLastAtDepth = !folderList.slice(fi + 1).some(
+          f => f.rootName === folder.rootName && f.depth === folder.depth && f.path.split('/').slice(0, -1).join('/') === folder.path.split('/').slice(0, -1).join('/')
+        );
+        const treeChar = isLastAtDepth ? '└─ ' : '├─ ';
+        // Each depth level gets padding + tree connector
+        prefix = '\u00A0\u00A0\u00A0\u00A0'.repeat(folder.depth - 1) + treeChar;
+      }
+
+      const displayName = folder.title || folder.path.split('/').pop() || folder.path;
+      option.textContent = `${prefix}${displayName} ${countLabel}`;
       select.appendChild(option);
 
       if (datalist) {
         const dataOpt = document.createElement('option');
         dataOpt.value = folder.path;
         datalist.appendChild(dataOpt);
+
+        // Also add leaf name if different
+        if (folder.title && folder.title !== folder.path) {
+          const leafOpt = document.createElement('option');
+          leafOpt.value = folder.title;
+          datalist.appendChild(leafOpt);
+        }
       }
+    }
+
+    if (curSelectedFolder && [...select.options].some(o => o.value === curSelectedFolder)) {
+      select.value = curSelectedFolder;
     }
   } catch (error) {
     document.getElementById('scopeNote').textContent = `Could not load folders: ${error.message}`;
@@ -181,6 +425,19 @@ function handleScopeModeChange() {
     loadUnsortedBookmarks();
     return;
   }
+
+  // If user switched to folder mode and nothing was selected yet, auto-select the first folder with bookmarks
+  if (!select.value && select.options.length > 1) {
+    let candidateIndex = 1;
+    for (let i = 1; i < select.options.length; i++) {
+      if (select.options[i].textContent.includes('direct bookmark') && !select.options[i].textContent.includes('(0 direct bookmarks)')) {
+        candidateIndex = i;
+        break;
+      }
+    }
+    select.selectedIndex = candidateIndex;
+  }
+
   selectedScope = { type: 'folder', folderId: select.value };
   document.getElementById('scopeDescription').textContent = 'Choose a folder or subfolder. Only direct bookmarks in that one folder will be included.';
   document.getElementById('scopeNote').textContent = 'Nested folders are not included. Choose the exact folder whose direct bookmarks you want to sort.';
@@ -245,7 +502,7 @@ function matchesDomainRule(url, rules) {
         return rule.folder;
       }
     }
-  } catch (err) {
+  } catch {
     // Ignore invalid URL
   }
   return null;
@@ -256,18 +513,67 @@ async function loadUnsortedBookmarks() {
   document.getElementById('refreshScopeBtn').disabled = true;
   const progressCard = document.getElementById('batchProgressCard');
   if (progressCard) progressCard.style.display = 'none';
+
+  if (selectedScope.type === 'folder' && !selectedScope.folderId) {
+    const select = document.getElementById('sortFolderSelect');
+    if (select?.value) {
+      selectedScope.folderId = select.value;
+    } else if (select && select.options.length > 1) {
+      let candidateIndex = 1;
+      for (let i = 1; i < select.options.length; i++) {
+        if (select.options[i].textContent.includes('direct bookmark') && !select.options[i].textContent.includes('(0 direct bookmarks)')) {
+          candidateIndex = i;
+          break;
+        }
+      }
+      select.selectedIndex = candidateIndex;
+      selectedScope.folderId = select.value;
+    }
+  }
+
   try {
     const settings = await chrome.storage.sync.get({ domainRules: [] });
     domainRules = Array.isArray(settings.domainRules) ? settings.domainRules : [];
-    response = await chrome.runtime.sendMessage({ action: 'getUnsortedBookmarks', scope: selectedScope });
+    try {
+      response = await chrome.runtime.sendMessage({ action: 'getUnsortedBookmarks', scope: selectedScope });
+    } catch {
+      // Fallback to direct chrome.bookmarks query
+    }
+
+    if (!response?.success) {
+      if (selectedScope.type === 'folder') {
+        if (!selectedScope.folderId) {
+          response = { success: true, bookmarks: [], scopeLabel: 'None selected', noFolderSelected: true };
+        } else if (chrome?.bookmarks?.getChildren) {
+          const children = await chrome.bookmarks.getChildren(selectedScope.folderId);
+          let folderTitle = 'folder';
+          try {
+            const [folderNode] = await chrome.bookmarks.get(selectedScope.folderId);
+            folderTitle = folderNode?.title || folderTitle;
+          } catch {
+            // Ignore
+          }
+          response = {
+            success: true,
+            bookmarks: children.filter(c => Boolean(c.url)),
+            scopeLabel: `direct bookmarks in “${folderTitle}”`
+          };
+        }
+      }
+    }
   } catch (e) {
     showAlert('Extension error: ' + e.message, 'error');
     return;
   } finally {
     document.getElementById('refreshScopeBtn').disabled = false;
   }
-  if (!response.success) {
-    showAlert('Error loading bookmarks: ' + response.error, 'error');
+
+  if (response?.noFolderSelected) {
+    clearBookmarkTable('Choose a folder or subfolder above to load its direct bookmarks.');
+    return;
+  }
+  if (!response?.success) {
+    showAlert('Error loading bookmarks: ' + (response?.error || 'Unknown error'), 'error');
     return;
   }
   const scopeLabel = response.scopeLabel || 'the selected scope';
@@ -468,7 +774,7 @@ function handleBatchProgress(progress) {
     if (titleEl) {
       titleEl.textContent = progress.totalBatches > 1
         ? `Analyzing ${progress.totalBatches} batches in parallel (${completedBatchesCount}/${progress.totalBatches} complete)…`
-        : `Completed Batch 1 of 1`;
+        : 'Completed Batch 1 of 1';
     }
 
     const pct = Math.round((completedBatchesCount / progress.totalBatches) * 100);
@@ -520,12 +826,7 @@ async function analyzeSelected() {
     return;
   }
 
-  const aiConfig = await chrome.runtime.sendMessage({ action: 'checkAIConfig' }).catch(() => null);
-  if (aiConfig && !aiConfig.hasAI) {
-    showAlert('AI Provider not configured. Please open Extension Settings to enter your API key before sorting bookmarks.', 'error');
-    chrome.runtime.openOptionsPage();
-    return;
-  }
+
 
   const btn = document.getElementById('analyzeBtn');
   const stopBtn = document.getElementById('stopAnalysisBtn');
@@ -535,9 +836,9 @@ async function analyzeSelected() {
   stopBtn.disabled = false;
   stopBtn.textContent = '⏹ Stop';
   isAnalyzing = true;
-  
+
   const total = checkedIds.length;
-  btn.textContent = `Analyzing bookmarks…`;
+  btn.textContent = 'Analyzing bookmarks…';
   showAlert(`Preparing batch analysis for ${total} bookmark${total === 1 ? '' : 's'}…`, 'loading');
 
   // Reset batch progress UI and telemetry
@@ -569,6 +870,10 @@ async function analyzeSelected() {
     if (timeMetric) timeMetric.textContent = `${elapsedSec}s elapsed`;
   }, 100);
 
+  const sortModelSelect = document.getElementById('sortModelSelect');
+  const selectedModelId = sortModelSelect?.value || 'auto';
+  const isCloudSelected = selectedModelId === 'cloud';
+  const useLocalSort = !isCloudSelected;
   const allowCreateFolders = Boolean(document.getElementById('allowCreateFolders')?.checked);
   const newFolderLocation = document.getElementById('inboxNewFolderLocation')?.value || 'root-bar';
   const allowRecursive = Boolean(document.getElementById('inboxAllowRecursiveFolders')?.checked);
@@ -584,10 +889,16 @@ async function analyzeSelected() {
       action: 'getAISuggestionsBatch',
       bookmarks: selectedBookmarks.map(({ id, title, url }) => ({ id, title, url })),
       allowCreateFolders,
+      modelId: selectedModelId,
+      useLocalJevModel: useLocalSort,
+      useLocalEmbeddings: useLocalSort,
       options: {
         allowCreateFolders,
         newFolderLocation,
-        allowRecursive
+        allowRecursive,
+        modelId: selectedModelId,
+        useLocalJevModel: useLocalSort,
+        useLocalEmbeddings: useLocalSort
       }
     });
 
@@ -651,14 +962,14 @@ async function analyzeSelected() {
   } else if (caughtErrorMessage) {
     showAlert(`Analysis failed: ${caughtErrorMessage}`, 'error');
   } else if (hitRateLimit) {
-    showAlert(`Stopped early: rate limit reached before suggestions were generated. Wait and retry.`, 'error');
+    showAlert('Stopped early: rate limit reached before suggestions were generated. Wait and retry.', 'error');
   } else {
     const resultById = new Map((response?.results || []).map(result => [String(result.id), result]));
     const firstErrorMessage = checkedIds.map(id => resultById.get(String(id))?.error).find(Boolean) || response?.error;
     if (firstErrorMessage) {
       showAlert(`Analysis failed: ${firstErrorMessage}`, 'error');
     } else {
-      showAlert(`Analysis complete, but no folder suggestions were generated. Make sure your AI Provider API key is configured in Settings.`, 'error');
+      showAlert('Analysis complete, but no folder suggestions were generated. Make sure your AI Provider API key is configured in Settings.', 'error');
     }
   }
 
@@ -873,11 +1184,13 @@ function updateButtonCounts() {
   let selectedCount = 0;
   let approvedCount = 0;
   let totalWithSuggestions = 0;
+  let hasAiSuggestions = false;
 
   for (const [id, row] of rowsById.entries()) {
     const bm = bookmarksById.get(id);
     if (bm?.suggestedFolder) {
       totalWithSuggestions++;
+      if (!bm.fromRule) hasAiSuggestions = true;
     }
     if (row.checkbox.checked) {
       selectedCount++;
@@ -896,8 +1209,8 @@ function updateButtonCounts() {
     applyBtn.textContent = `Apply Changes (${approvedCount})`;
     applyBtn.disabled = approvedCount === 0;
     applyBtn.className = 'btn btn-primary';
-    analyzeBtn.className = 'btn btn-secondary';
-    analyzeBtn.textContent = 'Re-analyze Selected';
+    analyzeBtn.className = hasAiSuggestions ? 'btn btn-secondary' : 'btn btn-primary';
+    analyzeBtn.textContent = hasAiSuggestions ? 'Re-analyze Selected' : 'Analyze Selected';
   } else {
     applyBtn.style.display = 'none';
     applyBtn.className = 'btn btn-secondary';

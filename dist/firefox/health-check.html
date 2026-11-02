@@ -26,6 +26,18 @@
     }
 
     /* ── Header ── */
+    .header-title-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+    .header-title-group img {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
     .page-header {
       display: flex;
       align-items: flex-start;
@@ -482,183 +494,221 @@
     }
 
     .back-link:hover { text-decoration: underline; }
+    /* Apple HIG Dark Mode Styles */
     @media (prefers-color-scheme: dark) {
       body {
-        background: #1a1a1a;
-        color: #e8eaed;
+        background: #1c1c1e;
+        color: #ffffff;
       }
 
       .page-header h1 {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .page-header p {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .progress-card {
-        background: #242424;
-        border-color: #3d3d3d;
+        background: #1e1e1e;
+        border-color: #383838;
       }
 
       .progress-label {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .progress-bar-track {
-        background: #3d3d3d;
+        background: #2c2c2e;
+      }
+
+      .progress-bar-fill {
+        background: #0091ff;
       }
 
       .summary-card {
-        background: #242424;
-        border-color: #3d3d3d;
+        background: #1e1e1e;
+        border-color: #383838;
       }
 
       .summary-number {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .summary-label {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .summary-card.active {
-        border-color: #8ab4f8;
+        border-color: #0091ff;
       }
 
       .summary-card.active .summary-number {
-        color: #8ab4f8;
+        color: #3cd3fe;
       }
 
-      .summary-card[data-filter="duplicates"] .summary-number { color: #a78bfa; }
-      .summary-card[data-filter="duplicates"].active { border-color: #a78bfa; }
+      .summary-card[data-filter="duplicates"] .summary-number { color: #db34f2; }
+      .summary-card[data-filter="duplicates"].active { border-color: #db34f2; }
 
-      .summary-card[data-filter="empty_folders"] .summary-number { color: #94a3b8; }
-      .summary-card[data-filter="empty_folders"].active { border-color: #94a3b8; }
+      .summary-card[data-filter="empty_folders"] .summary-number { color: #aeaeb2; }
+      .summary-card[data-filter="empty_folders"].active { border-color: #aeaeb2; }
 
-      .badge-duplicate { background: #3b2064; color: #c4b5fd; }
-      .badge-empty_folder { background: #1e293b; color: #cbd5e1; }
+      .badge-duplicate { background: rgba(219, 52, 242, 0.2); color: #db34f2; }
+      .badge-empty_folder { background: rgba(142, 142, 147, 0.2); color: #aeaeb2; }
 
       .last-run {
-        color: #6e6e6e;
+        color: #636366;
       }
 
       .bulk-bar-label {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .result-card {
-        background: #242424;
-        border-color: #3d3d3d;
+        background: #1e1e1e;
+        border-color: #383838;
       }
 
       .result-title {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .result-url {
-        color: #8ab4f8;
+        color: #3cd3fe;
       }
 
       .result-meta {
-        color: #6e6e6e;
+        color: #8e8e93;
       }
 
       .result-new-url {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .result-new-url strong {
-        color: #e8eaed;
+        color: #ffffff;
+      }
+
+      .btn-primary {
+        background: #0091ff;
+        color: #ffffff;
+      }
+
+      .btn-primary:not(:disabled):hover {
+        background: #007ae6;
       }
 
       .btn-secondary {
-        background: #2d2d2d;
-        color: #9aa0a6;
-        border-color: #3d3d3d;
+        background: #3a3a3c;
+        color: #ffffff;
+        border-color: #383838;
       }
 
       .btn-secondary:hover {
-        background: #3d3d3d;
-        color: #e8eaed;
+        background: #444446;
+        color: #3cd3fe;
+        border-color: #3cd3fe;
       }
 
       .btn-ghost {
-        color: #6e6e6e;
+        color: #8e8e93;
       }
 
       .btn-ghost:hover {
-        color: #9aa0a6;
-        border-color: #3d3d3d;
+        color: #3cd3fe;
+        border-color: #383838;
       }
 
       .card {
-        background: #242424;
-        border-color: #3d3d3d;
+        background: #1e1e1e;
+        border-color: #383838;
       }
 
       .card-header {
-        border-bottom-color: #3d3d3d;
+        border-bottom-color: #383838;
       }
 
       .card-title {
-        color: #e8eaed;
+        color: #ffffff;
+      }
+
+      .toggle-slider {
+        background: #3a3a3c;
+      }
+
+      .toggle-slider:before {
+        background: #8e8e93;
+      }
+
+      .toggle input:checked + .toggle-slider {
+        background: #30d158;
+      }
+
+      .toggle input:checked + .toggle-slider:before {
+        background: #ffffff;
       }
 
       .toggle-label {
-        color: #e8eaed;
+        color: #ffffff;
       }
 
       .form-hint {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .interval-tabs {
-        border-color: #3d3d3d;
+        border-color: #383838;
       }
 
       .interval-tab {
-        background: #2d2d2d;
-        color: #9aa0a6;
+        background: #2c2c2e;
+        color: #8e8e93;
       }
 
       .interval-tab:not(:last-child) {
-        border-right-color: #3d3d3d;
+        border-right-color: #383838;
       }
 
       .interval-tab:not(.active):hover {
-        background: #3d3d3d;
-        color: #e8eaed;
+        background: #3a3a3c;
+        color: #ffffff;
+      }
+
+      .interval-tab.active {
+        background: #0091ff;
+        color: #ffffff;
       }
 
       .stale-input {
-        background: #333333;
-        color: #e8eaed;
-        border-color: #3d3d3d;
+        background: #2c2c2e;
+        color: #ffffff;
+        border-color: #383838;
       }
 
       .stale-unit {
-        color: #9aa0a6;
+        color: #8e8e93;
       }
 
       .empty-state {
-        background: #242424;
-        border-color: #3d3d3d;
-        color: #9aa0a6;
+        background: #1e1e1e;
+        border-color: #383838;
+        color: #8e8e93;
       }
 
       .back-link {
-        color: #8ab4f8;
+        color: #0091ff;
       }
 
       .status-msg.success {
-        background: #1a3d2b;
-        color: #81c995;
+        background: rgba(48, 209, 88, 0.15);
+        color: #30d158;
+        border: 1px solid rgba(48, 209, 88, 0.3);
       }
 
       .status-msg.error {
-        background: #3d1a1a;
-        color: #f28b82;
+        background: rgba(255, 66, 69, 0.15);
+        color: #ff4245;
+        border: 1px solid rgba(255, 66, 69, 0.3);
       }
     }
   </style>
@@ -669,9 +719,12 @@
     <a href="options.html" class="back-link">&#8592; Settings</a>
 
     <div class="page-header">
-      <div>
-        <h1>Bookmark Health Check</h1>
-        <p>Scan your bookmarks for dead links, redirects, stale content, and disappeared domains.</p>
+      <div class="header-title-group">
+        <img src="icons/icon48.png" alt="AIJbookmarks">
+        <div>
+          <h1>Bookmark Health Check</h1>
+          <p>Scan your bookmarks for dead links, redirects, stale content, and disappeared domains.</p>
+        </div>
       </div>
       <button class="btn btn-primary" id="runBtn">Run Health Check</button>
     </div>
