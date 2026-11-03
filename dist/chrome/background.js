@@ -599,6 +599,9 @@ function getBookmarkTreeData() {
 }
 
 async function computeBookmarkTreeData() {
+  if (!chrome.bookmarks?.getTree) {
+    return { folders: [], folderPathMap: {}, allBookmarks: [] };
+  }
   await initializeRootIds();
   const tree = await chrome.bookmarks.getTree();
   const folders = [];
@@ -666,12 +669,14 @@ async function computeBookmarkTreeData() {
 // Registered at the top level (not inside a function) so these fire for the whole
 // service-worker lifetime. All state above is pure derived state, so a cold rebuild
 // on the next call after a service-worker restart is correct — no persistence needed.
-chrome.bookmarks.onCreated.addListener(invalidateBookmarkTreeCache);
-chrome.bookmarks.onRemoved.addListener(invalidateBookmarkTreeCache);
-chrome.bookmarks.onChanged.addListener(invalidateBookmarkTreeCache);
-chrome.bookmarks.onMoved.addListener(invalidateBookmarkTreeCache);
-if (chrome.bookmarks?.onChildrenReordered) {
-  chrome.bookmarks.onChildrenReordered.addListener(invalidateBookmarkTreeCache);
+if (chrome.bookmarks?.onCreated) {
+  chrome.bookmarks.onCreated.addListener(invalidateBookmarkTreeCache);
+  chrome.bookmarks.onRemoved?.addListener(invalidateBookmarkTreeCache);
+  chrome.bookmarks.onChanged?.addListener(invalidateBookmarkTreeCache);
+  chrome.bookmarks.onMoved?.addListener(invalidateBookmarkTreeCache);
+  if (chrome.bookmarks.onChildrenReordered) {
+    chrome.bookmarks.onChildrenReordered.addListener(invalidateBookmarkTreeCache);
+  }
 }
 
 /**
@@ -1927,6 +1932,13 @@ function matchesDomainRule(url, rules) {
  * Bookmarks (i.e. not inside any subfolder). These are the "unsorted" ones.
  */
 async function getUnsortedBookmarks(scope = {}) {
+  if (!chrome.bookmarks?.getChildren) {
+    return {
+      bookmarks: [],
+      scopeLabel: 'Bookmarks are not supported on Firefox for Android',
+      unsupported: true
+    };
+  }
   await initializeRootIds();
   if (scope?.type === 'folder') {
     const folderId = String(scope.folderId || '');
@@ -1980,6 +1992,9 @@ async function getUnsortedBookmarks(scope = {}) {
  * IDs, not paths, are used when sorting to avoid ambiguity between folders with the same name.
  */
 async function getSortingScopeFolders() {
+  if (!chrome.bookmarks?.getTree) {
+    return [];
+  }
   await initializeRootIds();
   const tree = await chrome.bookmarks.getTree();
   const folders = [];
@@ -2933,11 +2948,13 @@ async function getOrCreateFolder(title, parentId) {
 
 // Add context menu item for right-click bookmarking
 chrome.runtime.onInstalled.addListener(async () => {
-  chrome.contextMenus.create({
-    id: 'aijbookmarks',
-    title: 'Analyze and Bookmark with AI',
-    contexts: ['page']
-  });
+  if (chrome.contextMenus?.create) {
+    chrome.contextMenus.create({
+      id: 'aijbookmarks',
+      title: 'Analyze and Bookmark with AI',
+      contexts: ['page']
+    });
+  }
   // Set up health check alarm based on saved settings
   setupHealthCheckAlarm().catch(console.error);
 
@@ -2957,13 +2974,15 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener(async (info) => {
-  if (info.menuItemId === 'aijbookmarks') {
-    if (chrome.action?.openPopup) {
-      chrome.action.openPopup().catch(() => {});
+if (chrome.contextMenus?.onClicked) {
+  chrome.contextMenus.onClicked.addListener(async (info) => {
+    if (info.menuItemId === 'aijbookmarks') {
+      if (chrome.action?.openPopup) {
+        chrome.action.openPopup().catch(() => {});
+      }
     }
-  }
-});
+  });
+}
 
 // Run periodic health check when alarm fires
 chrome.alarms.onAlarm.addListener((alarm) => {
