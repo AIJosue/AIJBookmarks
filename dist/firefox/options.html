@@ -891,6 +891,15 @@
                 autocomplete="off"
               >
             </div>
+            <div class="form-group">
+              <label class="form-label" for="anthropicModel">Model</label>
+              <div class="model-row">
+                <select id="anthropicModel" name="anthropicModel" class="form-input-select">
+                  <option value="">— click Load Models —</option>
+                </select>
+                <button type="button" class="btn-load" id="loadAnthropicModelsBtn">Load Models</button>
+              </div>
+            </div>
           </div>
 
           <!-- ChatGPT / OpenAI & Compatible section -->
@@ -1002,18 +1011,12 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="geminiModel">Model</label>
-              <select id="geminiModel" name="geminiModel" class="form-input-select">
-                <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
-                <option value="gemini-3.6-pro">Gemini 3.6 Pro</option>
-                <option value="gemini-3.6-flash-lite">Gemini 3.6 Flash-Lite</option>
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Legacy)</option>
-                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
-              </select>
+              <div class="model-row">
+                <select id="geminiModel" name="geminiModel" class="form-input-select">
+                  <option value="">— click Load Models —</option>
+                </select>
+                <button type="button" class="btn-load" id="loadGeminiModelsBtn">Load Models</button>
+              </div>
             </div>
           </div>
 
@@ -1035,13 +1038,12 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="googleCloudModel">Model</label>
-              <select id="googleCloudModel" name="googleCloudModel" class="form-input-select">
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
-                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
-                <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
-              </select>
+              <div class="model-row">
+                <select id="googleCloudModel" name="googleCloudModel" class="form-input-select">
+                  <option value="">— click Load Models —</option>
+                </select>
+                <button type="button" class="btn-load" id="loadGoogleCloudModelsBtn">Load Models</button>
+              </div>
             </div>
           </div>
           <div class="form-group">

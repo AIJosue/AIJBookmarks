@@ -863,11 +863,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
   }
 
   function normalizeGeminiModel(model) {
-    const normalized = (model || '').replace(/^models\//, '');
-    if (!normalized || normalized === 'gemini-3.7-flash') {
-      return 'gemini-3.6-flash';
-    }
-    return normalized;
+    return (model || '').replace(/^models\//, '');
   }
 
   // Gemini, Google Cloud, or custom/local OpenAI endpoints can take longer
@@ -981,7 +977,8 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
     } else if (provider === 'google-cloud') {
       let response;
       try {
-        const model = String(settings.googleCloudModel || 'gemini-3.7-flash').replace(/^models\//, '');
+        const model = String(settings.googleCloudModel || '').replace(/^models\//, '');
+        if (!model) throw new Error('No Google Cloud model selected. Open Extension Settings and click Load Models.');
         const rawApiKey = typeof settings.googleCloudApiKey === 'string' ? settings.googleCloudApiKey.trim() : '';
         if (!rawApiKey) {
           throw new Error('Google Cloud API key not configured. Please configure it in Extension Settings.');
@@ -1059,7 +1056,8 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
         throw new Error('Gemini API key not configured. Please configure it in Extension Settings.');
       }
       const rawModel = normalizeGeminiModel(settings.geminiModel);
-      const geminiModels = [rawModel, 'gemini-3.6-flash', 'gemini-1.5-flash'].filter(Boolean);
+      if (!rawModel) throw new Error('No Gemini model selected. Open Extension Settings and click Load Models.');
+      const geminiModels = [rawModel];
       const uniqueGeminiModels = [...new Set(geminiModels)];
 
       let response = null;
@@ -1127,12 +1125,10 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       if (!settings.anthropicApiKey || !settings.anthropicApiKey.trim()) {
         throw new Error('Anthropic Claude API key is not configured. Please open Extension Settings to enter your API key.');
       }
-      const anthropicModels = [
-        'claude-3-5-haiku-20241022',
-        'claude-3-haiku-20240307',
-        'claude-3-5-sonnet-20241022',
-        'claude-haiku-4-5-20251001'
-      ];
+      if (!settings.anthropicModel) {
+        throw new Error('No Anthropic model selected. Open Extension Settings and click Load Models.');
+      }
+      const anthropicModels = [settings.anthropicModel];
       let response = null;
       let lastErrorText = '';
       for (const anthropicModel of anthropicModels) {
@@ -1468,6 +1464,7 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
     const settings = await chrome.storage.sync.get({
       aiProvider: 'anthropic',
       anthropicApiKey: '',
+      anthropicModel: '',
       openaiApiKey: '',
       openaiBaseUrl: 'https://api.openai.com/v1',
       openaiModel: '',
@@ -1475,9 +1472,9 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       openrouterApiKey: '',
       openrouterModel: '',
       geminiApiKey: '',
-      geminiModel: 'gemini-3.6-flash',
+      geminiModel: '',
       googleCloudApiKey: '',
-      googleCloudModel: 'gemini-3.7-flash',
+      googleCloudModel: '',
       instapaperUsername: '',
       instapaperPassword: '',
       todoistApiToken: '',
@@ -3012,6 +3009,7 @@ async function getAIConfig() {
   const defaults = {
     aiProvider: 'anthropic',
     anthropicApiKey: '',
+    anthropicModel: '',
     openaiApiKey: '',
     openaiBaseUrl: 'https://api.openai.com/v1',
     openaiModel: '',
@@ -3020,9 +3018,9 @@ async function getAIConfig() {
     openrouterApiKey: '',
     openrouterModel: '',
     geminiApiKey: '',
-    geminiModel: 'gemini-3.6-flash',
+    geminiModel: '',
     googleCloudApiKey: '',
-    googleCloudModel: 'gemini-3.7-flash',
+    googleCloudModel: '',
     domainRules: [],
     sortAllowCreateFolders: false,
     sortNewFolderLocation: 'root-bar',
@@ -3031,8 +3029,10 @@ async function getAIConfig() {
     sortBatchConcurrency: 4
   };
 
-  const syncSettings = await chrome.storage.sync.get(defaults).catch(() => ({}));
-  const localSettings = await chrome.storage.local.get(defaults).catch(() => ({}));
+  const [syncSettings, localSettings] = await Promise.all([
+    chrome.storage.sync.get(defaults).catch(() => ({})),
+    chrome.storage.local.get(defaults).catch(() => ({}))
+  ]);
   const settings = { ...defaults, ...localSettings, ...syncSettings };
 
   let provider = settings.aiProvider || 'anthropic';

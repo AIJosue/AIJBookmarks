@@ -3,3 +3,7 @@ node_modules/
 .codegraph/
 .gemini/
 
+.projectmem/events.jsonl
+.projectmem/watch.pid
+.projectmem/watch.log
+.projectmem/structure.json

@@ -2,6 +2,7 @@
 const DEFAULT_SETTINGS = {
   aiProvider: 'anthropic',
   anthropicApiKey: '',
+  anthropicModel: '',
   openaiApiKey: '',
   openaiBaseUrl: 'https://api.openai.com/v1',
   openaiModel: '',
@@ -10,9 +11,9 @@ const DEFAULT_SETTINGS = {
   openrouterApiKey: '',
   openrouterModel: '',
   geminiApiKey: '',
-  geminiModel: 'gemini-3.6-flash',
+  geminiModel: '',
   googleCloudApiKey: '',
-  googleCloudModel: 'gemini-3.7-flash',
+  googleCloudModel: '',
   localModelContext: 8192,
   instapaperUsername: '',
   instapaperPassword: '',
@@ -234,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('loadModelsBtn').addEventListener('click', () => loadOpenRouterModels(null, true));
   document.getElementById('loadOpenaiModelsBtn')?.addEventListener('click', () => loadOpenaiModels(true));
+  document.getElementById('loadAnthropicModelsBtn')?.addEventListener('click', () => loadAnthropicModels(true));
   document.getElementById('loadGeminiModelsBtn')?.addEventListener('click', () => loadGeminiModels(true, null, false));
   document.getElementById('loadGoogleCloudModelsBtn')?.addEventListener('click', () => loadGeminiModels(true, null, true));
   document.getElementById('openaiModel')?.addEventListener('change', (e) => {
@@ -658,8 +660,10 @@ function ensureSelectHasValue(selectId, value) {
 
 async function loadSettings() {
   try {
-    const syncSettings = await chrome.storage.sync.get(DEFAULT_SETTINGS).catch(() => ({}));
-    const localSettings = await chrome.storage.local.get(DEFAULT_SETTINGS).catch(() => ({}));
+    const [syncSettings, localSettings] = await Promise.all([
+      chrome.storage.sync.get(DEFAULT_SETTINGS).catch(() => ({})),
+      chrome.storage.local.get(DEFAULT_SETTINGS).catch(() => ({}))
+    ]);
     const settings = { ...DEFAULT_SETTINGS, ...localSettings, ...syncSettings };
 
     currentProvider = settings.aiProvider || 'anthropic';
@@ -699,8 +703,9 @@ async function loadSettings() {
     }
 
     ensureSelectHasValue('openrouterModel', settings.openrouterModel);
-    ensureSelectHasValue('geminiModel', settings.geminiModel || 'gemini-3.6-flash');
-    ensureSelectHasValue('googleCloudModel', settings.googleCloudModel || 'gemini-3.7-flash');
+    ensureSelectHasValue('geminiModel', settings.geminiModel);
+    ensureSelectHasValue('googleCloudModel', settings.googleCloudModel);
+    ensureSelectHasValue('anthropicModel', settings.anthropicModel);
 
     const modelContextVal = snapToNearestBinaryContext(settings.modelContextWindow || 131072);
     document.getElementById('modelContextWindow').value = modelContextVal;
@@ -770,18 +775,12 @@ async function loadSettings() {
 
     syncToggleDependencies();
 
-    if (settings.openrouterApiKey) {
-      loadOpenRouterModels(settings.openrouterModel);
-    }
-    if (settings.openaiApiKey || (settings.openaiBaseUrl && !settings.openaiBaseUrl.includes('api.openai.com'))) {
-      loadOpenaiModels(false, settings.openaiModel);
-    }
-    if (settings.geminiApiKey) {
-      loadGeminiModels(false, settings.geminiModel, false);
-    }
-    if (settings.googleCloudApiKey) {
-      loadGeminiModels(false, settings.googleCloudModel, true);
-    }
+    // Only fetch models for the active provider; fetching all providers on every open is slow on mobile.
+    if (currentProvider === 'openrouter' && settings.openrouterApiKey) loadOpenRouterModels(settings.openrouterModel);
+    if (currentProvider === 'openai' && (settings.openaiApiKey || (settings.openaiBaseUrl && !settings.openaiBaseUrl.includes('api.openai.com')))) loadOpenaiModels(false, settings.openaiModel);
+    if (currentProvider === 'gemini' && settings.geminiApiKey) loadGeminiModels(false, settings.geminiModel, false);
+    if (currentProvider === 'google-cloud' && settings.googleCloudApiKey) loadGeminiModels(false, settings.googleCloudModel, true);
+    if (currentProvider === 'anthropic' && settings.anthropicApiKey) loadAnthropicModels(false, settings.anthropicModel);
   } catch (error) {
     console.error('Error loading settings:', error);
     showStatus('Error loading settings: ' + error.message, 'error');
@@ -790,6 +789,7 @@ async function loadSettings() {
 
 async function saveSettings() {
   const anthropicApiKey = document.getElementById('anthropicApiKey').value.trim();
+  const anthropicModel = document.getElementById('anthropicModel').value;
   const openaiApiKey = document.getElementById('openaiApiKey').value.trim();
   const openaiBaseUrl = document.getElementById('openaiBaseUrl')?.value.trim() || 'https://api.openai.com/v1';
   const openaiModel = document.getElementById('openaiModel').value;
@@ -841,6 +841,7 @@ async function saveSettings() {
   const settingsToSave = {
     aiProvider: currentProvider,
     anthropicApiKey,
+    anthropicModel,
     openaiApiKey,
     openaiBaseUrl,
     openaiModel,
@@ -1081,6 +1082,49 @@ function syncToggleDependencies() {
   });
 }
 
+async function loadAnthropicModels(forceRefresh = false, preselectedModel = null) {
+  const btn = document.getElementById('loadAnthropicModelsBtn');
+  const select = document.getElementById('anthropicModel');
+  const apiKey = document.getElementById('anthropicApiKey').value.trim();
+  if (!apiKey) {
+    if (forceRefresh) showStatus('Please enter an API key first to fetch models.', 'error');
+    return;
+  }
+  btn.textContent = 'Loading…';
+  btn.disabled = true;
+  select.disabled = true;
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/models?limit=1000', {
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const models = (await response.json()).data || [];
+    if (models.length === 0) throw new Error('No models available');
+    const currentValue = preselectedModel || select.value;
+    const ids = models.map(m => m.id);
+    const selectedId = ids.includes(currentValue) ? currentValue : ids[0];
+    select.textContent = '';
+    for (const m of models) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.display_name ? `${m.display_name} (${m.id})` : m.id;
+      opt.selected = m.id === selectedId;
+      select.appendChild(opt);
+    }
+    if (forceRefresh) showStatus(`Loaded ${models.length} available models.`, 'success');
+  } catch (error) {
+    if (forceRefresh) showStatus('Failed to load models: ' + error.message, 'error');
+  } finally {
+    btn.textContent = 'Load Models';
+    btn.disabled = false;
+    select.disabled = false;
+  }
+}
+
 async function loadGeminiModels(forceRefresh = false, preselectedModel = null, isGoogleCloud = false) {
   const btnId = isGoogleCloud ? 'loadGoogleCloudModelsBtn' : 'loadGeminiModelsBtn';
   const selectId = isGoogleCloud ? 'googleCloudModel' : 'geminiModel';
@@ -1308,6 +1352,7 @@ function showCustomLLMError(msg) {
 
 async function refreshCustomLLMUI() {
   const badge = document.getElementById('customLLMStatusBadge');
+  const indicator = document.getElementById('modelLoadedIndicator');
   const title = document.getElementById('customLLMTitle');
   const sizeBadge = document.getElementById('customLLMSizeBadge');
   const btnDownload = document.getElementById('btnDownloadCustomLLM');
@@ -1456,6 +1501,7 @@ function showCustomModelError(msg) {
 
 async function refreshCustomModelUI() {
   const badge = document.getElementById('customModelStatusBadge');
+  const indicator = document.getElementById('modelLoadedIndicator');
   const title = document.getElementById('customModelTitle');
   const dimsBadge = document.getElementById('customModelDimsBadge');
   const sizeBadge = document.getElementById('customModelSizeBadge');
