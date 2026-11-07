@@ -460,7 +460,7 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
     }
   });
 
-  it('should filter out thought parts from Gemini thinking models and extract JSON suggestions', async () => {
+  it('should call exact configured Gemini model and parse suggestions', async () => {
     globalThis.chrome.bookmarks.getTree = async () => [
       {
         id: '0',
@@ -481,6 +481,7 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
 
     const originalGetSync = globalThis.chrome.storage.sync.get;
     const originalFetch = globalThis.fetch;
+    let requestedUrl = null;
     try {
       globalThis.chrome.storage.sync.get = async () => ({
         aiProvider: 'gemini',
@@ -488,21 +489,23 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
         geminiModel: 'gemini-2.5-flash'
       });
 
-      globalThis.fetch = async () => ({
-        ok: true,
-        json: async () => ({
-          candidates: [
-            {
-              content: {
-                parts: [
-                  { thought: true, text: 'Thinking about classifying this url...' },
-                  { text: JSON.stringify([{ id: 'b2', matchedCategory: 'Developer' }]) }
-                ]
+      globalThis.fetch = async (url) => {
+        requestedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    { text: JSON.stringify([{ id: 'b2', matchedCategory: 'Developer' }]) }
+                  ]
+                }
               }
-            }
-          ]
-        })
-      });
+            ]
+          })
+        };
+      };
 
       const batch = [
         { id: 'b2', title: 'MDN Web Docs', url: 'https://developer.mozilla.org' }
@@ -513,6 +516,7 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
       assert.strictEqual(response.results.length, 1);
       assert.strictEqual(response.results[0].id, 'b2');
       assert.strictEqual(response.results[0].matchedCategory, 'Developer');
+      assert.ok(requestedUrl.includes('models/gemini-2.5-flash:generateContent'));
     } finally {
       globalThis.chrome.storage.sync.get = originalGetSync;
       globalThis.fetch = originalFetch;
