@@ -757,10 +757,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
             ],
             generationConfig: {
               maxOutputTokens: maxTokens,
-              responseMimeType: 'application/json',
-              thinkingConfig: {
-                thinkingBudget: 0
-              }
+              responseMimeType: 'application/json'
             }
           }),
           signal: controller.signal
@@ -768,7 +765,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
 
         if (!response.ok && response.status === 400) {
           const errorText = await response.clone().text();
-          if (errorText.includes('thinkingConfig') || errorText.includes('thinking_config') || errorText.includes('thinkingBudget')) {
+          if (errorText.toLowerCase().includes('thinking') || errorText.includes('thinkingConfig') || errorText.includes('thinking_config') || errorText.includes('thinkingBudget')) {
             response = await fetch(`https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent`, {
               method: 'POST',
               headers: {
@@ -831,8 +828,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
               generationConfig: {
-                maxOutputTokens: maxTokens,
-                thinkingConfig: { thinkingBudget: 0 }
+                maxOutputTokens: maxTokens
               }
             }),
             signal: controller.signal
@@ -840,7 +836,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
 
           if (!response.ok && response.status === 400) {
             const errorText = await response.clone().text();
-            if (errorText.includes('thinkingConfig') || errorText.includes('thinking_config') || errorText.includes('thinkingBudget')) {
+            if (errorText.toLowerCase().includes('thinking') || errorText.includes('thinkingConfig') || errorText.includes('thinking_config') || errorText.includes('thinkingBudget')) {
               response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
                 method: 'POST',
                 headers: {
@@ -858,7 +854,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
 
           if (response.ok) break;
           lastErrorText = await response.text();
-          if (response.status !== 404) break;
+          if (response.status !== 404 && response.status !== 400) break;
         } catch (error) {
           if (error.name === 'AbortError') throw error;
           lastErrorText = error.message;
