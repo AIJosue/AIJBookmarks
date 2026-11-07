@@ -39,7 +39,7 @@ PERMISSIONS
 SUPPORT
 Found a bug? Have a suggestion? Open an issue on our GitHub repository: https://github.com/AIJosue/AIJbookmarks
 
-Version 3.4.1 — Fixed Gemini API 400 thinking budget error on models without thinking enabled, streamlined cloud AI model selection, and updated link health diagnostics.
+Version 3.4.2 — Comprehensive AI provider bug fixes across Google Gemini, Google Cloud, OpenAI, OpenRouter, and Anthropic: filtered out non-text (TTS/audio/embedding) models, added Gemini thinking part extraction, and robust provider fallbacks.
 
 **Category**
 Productivity
@@ -139,6 +139,7 @@ https://github.com/AIJosue/AIJbookmarks
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 3.4.2 | 2026-11-07 | Comprehensive AI provider bug fixes: filtered non-text models (TTS, audio, embeddings), added Gemini thinking part filtering, and robust provider fallbacks. | Draft |
 | 3.4.1 | 2026-11-07 | Fixed Gemini API 400 invalid argument error ("Thinking is not enabled for this model") by eliminating unneeded thinkingConfig payloads. | Draft |
 | 3.4.0 | 2026-11-07 | Streamlined AI configuration for cloud providers, on-demand model loading with "Load Models", removed local model bloat and dependencies, enhanced desktop Chrome and Firefox support. | Draft |
 | 3.1.0 | 2026-05-24 | Added "Checked by Default" configuration settings for each integration, enabling users to choose default checked/unchecked states for Instapaper, Todoist, Things, Readwise, and Raindrop.io in the popup. | Draft |

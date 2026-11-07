@@ -459,4 +459,63 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('should filter out thought parts from Gemini thinking models and extract JSON suggestions', async () => {
+    globalThis.chrome.bookmarks.getTree = async () => [
+      {
+        id: '0',
+        title: '',
+        children: [
+          {
+            id: '1',
+            parentId: '0',
+            title: 'Bookmarks Bar',
+            children: [
+              { id: 'f1', parentId: '1', title: 'Developer', children: [] }
+            ]
+          }
+        ]
+      }
+    ];
+    invalidateBookmarkTreeCache();
+
+    const originalGetSync = globalThis.chrome.storage.sync.get;
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.chrome.storage.sync.get = async () => ({
+        aiProvider: 'gemini',
+        geminiApiKey: 'AQ-test-key-999',
+        geminiModel: 'gemini-2.5-flash'
+      });
+
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { thought: true, text: 'Thinking about classifying this url...' },
+                  { text: JSON.stringify([{ id: 'b2', matchedCategory: 'Developer' }]) }
+                ]
+              }
+            }
+          ]
+        })
+      });
+
+      const batch = [
+        { id: 'b2', title: 'MDN Web Docs', url: 'https://developer.mozilla.org' }
+      ];
+
+      const response = await handleGetAISuggestionsBatch(batch);
+      assert.strictEqual(response.success, true);
+      assert.strictEqual(response.results.length, 1);
+      assert.strictEqual(response.results[0].id, 'b2');
+      assert.strictEqual(response.results[0].matchedCategory, 'Developer');
+    } finally {
+      globalThis.chrome.storage.sync.get = originalGetSync;
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

@@ -919,6 +919,17 @@ async function loadOpenRouterModels(preselectedModel = null, forceRefresh = fals
       const data = await response.json();
       models = data.data || [];
 
+      // Filter out non-chat models (embedding, audio, image, moderation)
+      models = models.filter(m => {
+        const id = (m.id || '').toLowerCase();
+        const name = (m.name || '').toLowerCase();
+        if (id.includes('embed') || name.includes('embed')) return false;
+        if (id.includes('whisper') || id.includes('tts') || id.includes('audio')) return false;
+        if (id.includes('image') || id.includes('flux') || id.includes('diffusion') || id.includes('midjourney')) return false;
+        if (id.includes('moderation')) return false;
+        return true;
+      });
+
       // Sort models by name
       models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
 
@@ -981,6 +992,16 @@ async function loadOpenaiModels(_forceRefresh = false, preselectedModel = null) 
 
     const data = await response.json();
     let models = Array.isArray(data.data) ? data.data : (Array.isArray(data.models) ? data.models : (Array.isArray(data) ? data : []));
+
+    // Filter out non-chat models (audio, embedding, whisper, tts, dall-e, realtime)
+    models = models.filter(m => {
+      const id = (typeof m === 'string' ? m : (m.id || m.name || '')).toLowerCase();
+      if (!id) return false;
+      if (id.includes('embedding') || id.includes('whisper') || id.includes('tts') || id.includes('dall-e') || id.includes('audio') || id.includes('realtime')) {
+        return false;
+      }
+      return true;
+    });
 
     // Sort models
     models.sort((a, b) => {
@@ -1143,8 +1164,19 @@ async function loadGeminiModels(forceRefresh = false, preselectedModel = null, i
     const data = await response.json();
     let models = Array.isArray(data.models) ? data.models : [];
 
-    // Filter to generative models (generateContent)
-    models = models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'));
+    // Filter to generative text models (generateContent, excluding audio/TTS/image models)
+    models = models.filter(m => {
+      const name = (m.name || '').toLowerCase();
+      const displayName = (m.displayName || '').toLowerCase();
+      const methods = m.supportedGenerationMethods || [];
+      if (!methods.includes('generateContent')) return false;
+      // Exclude TTS, audio-only, speech, image generation, and embedding models
+      if (name.includes('tts') || displayName.includes('tts') || displayName.includes('text to speech') || displayName.includes('text-to-speech')) return false;
+      if (name.includes('realtime') || name.includes('audio') || displayName.includes('audio')) return false;
+      if (name.includes('imagen') || name.includes('image') || displayName.includes('image')) return false;
+      if (name.includes('embedding') || name.includes('embed') || displayName.includes('embedding') || displayName.includes('embed')) return false;
+      return true;
+    });
 
     const currentValue = preselectedModel || select.value;
 

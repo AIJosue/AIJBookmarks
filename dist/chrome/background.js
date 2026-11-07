@@ -205,7 +205,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       case 'checkAIConfig': {
         const { hasAI, provider, settings } = await getAIConfig();
-        const model = settings[`${provider}Model`] || settings.geminiModel || '';
+        let model = '';
+        if (provider === 'openai') {
+          model = settings.openaiCustomModel?.trim() || settings.openaiModel || 'gpt-4o-mini';
+        } else if (provider === 'openrouter') {
+          model = settings.openrouterModel || 'anthropic/claude-3.5-haiku';
+        } else if (provider === 'gemini') {
+          model = settings.geminiModel || 'gemini-2.5-flash';
+        } else if (provider === 'google-cloud') {
+          model = settings.googleCloudModel || 'gemini-2.5-flash';
+        } else {
+          model = settings.anthropicModel || 'claude-3-5-haiku-20241022';
+        }
         sendResponse({
           hasAI,
           hasCloudAI: hasAI,
@@ -620,12 +631,33 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
     }
     const compact = String(errorText || '').replace(/\s+/g, ' ').trim();
     const short = compact.length > 320 ? `${compact.slice(0, 317)}...` : compact;
-    const providerName = activeProvider === 'anthropic' ? 'Anthropic' : activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1);
+    const providerNames = {
+      anthropic: 'Anthropic Claude',
+      openai: 'OpenAI / Compatible',
+      openrouter: 'OpenRouter',
+      gemini: 'Google Gemini',
+      'google-cloud': 'Google Cloud'
+    };
+    const providerName = providerNames[activeProvider] || (activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1));
     return `${providerName} API error: ${status}${short ? ` - ${short}` : ''}`;
   }
 
   function normalizeGeminiModel(model) {
-    return (model || '').replace(/^models\//, '');
+    const clean = (model || '').replace(/^models\//, '').trim();
+    const lower = clean.toLowerCase();
+    if (!clean || lower.includes('tts') || lower.includes('audio') || lower.includes('realtime') || lower.includes('imagen') || lower.includes('embed')) {
+      return '';
+    }
+    return clean;
+  }
+
+  function normalizeGoogleCloudModel(model) {
+    const clean = (model || '').replace(/^models\//, '').trim();
+    const lower = clean.toLowerCase();
+    if (!clean || lower.includes('tts') || lower.includes('audio') || lower.includes('realtime') || lower.includes('imagen') || lower.includes('embed')) {
+      return '';
+    }
+    return clean;
   }
 
   // Gemini, Google Cloud, or custom/local OpenAI endpoints can take longer
@@ -645,15 +677,22 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       let response;
       try {
         const baseUrl = rawBaseUrl.replace(/\/+$/, '');
-        const openaiModel = settings.openaiCustomModel?.trim() || settings.openaiModel || 'gpt-4o-mini';
+        let openaiModel = settings.openaiCustomModel?.trim() || settings.openaiModel || 'gpt-4o-mini';
+        const lowerModel = openaiModel.toLowerCase();
+        if (lowerModel.includes('tts') || lowerModel.includes('whisper') || lowerModel.includes('dall-e') || lowerModel.includes('embedding')) {
+          openaiModel = 'gpt-4o-mini';
+        }
+        const isReasoning = openaiModel.startsWith('o1') || openaiModel.startsWith('o3') || openaiModel.startsWith('o4');
         const requestBody = {
           model: openaiModel,
-          max_tokens: maxTokens,
           messages: [{ role: 'user', content: prompt }]
         };
-        // Disable reasoning/thinking for reasoning models
-        if (openaiModel.startsWith('o1') || openaiModel.startsWith('o3') || openaiModel.startsWith('o4')) {
+
+        if (isReasoning) {
+          requestBody.max_completion_tokens = Math.max(maxTokens, 4096);
           requestBody.reasoning_effort = 'low';
+        } else {
+          requestBody.max_tokens = maxTokens;
         }
 
         const headers = {
@@ -669,6 +708,34 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
           body: JSON.stringify(requestBody),
           signal: controller.signal
         });
+
+        if (!response.ok && response.status === 400) {
+          const errText = await response.clone().text();
+          let shouldRetry = false;
+          if (errText.includes('reasoning_effort')) {
+            delete requestBody.reasoning_effort;
+            shouldRetry = true;
+          }
+          if (errText.includes('max_completion_tokens') || errText.includes('max_tokens')) {
+            if (requestBody.max_tokens) {
+              delete requestBody.max_tokens;
+              requestBody.max_completion_tokens = maxTokens;
+            } else {
+              delete requestBody.max_completion_tokens;
+              requestBody.max_tokens = maxTokens;
+            }
+            delete requestBody.reasoning_effort;
+            shouldRetry = true;
+          }
+          if (shouldRetry) {
+            response = await fetch(`${baseUrl}/chat/completions`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(requestBody),
+              signal: controller.signal
+            });
+          }
+        }
       } catch (error) {
         console.error('Error calling OpenAI / Compatible API:', error);
         throw new Error(`Failed to call OpenAI API (${settings.openaiBaseUrl || 'https://api.openai.com/v1'}): ${error.message}`);
@@ -681,7 +748,19 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       }
 
       const message = await response.json();
-      const responseText = message.choices?.[0]?.message?.content;
+      const choice = message.choices?.[0];
+      let responseText = '';
+      if (typeof choice?.message?.content === 'string') {
+        responseText = choice.message.content;
+      } else if (Array.isArray(choice?.message?.content)) {
+        responseText = choice.message.content
+          .filter(p => !p.thought && (p.type === 'text' || typeof p.text === 'string' || typeof p === 'string'))
+          .map(p => (typeof p === 'string' ? p : (p.text || '')))
+          .join('\n')
+          .trim();
+      } else if (typeof choice?.text === 'string') {
+        responseText = choice.text;
+      }
       if (!responseText) {
         console.error('No content in OpenAI response:', JSON.stringify(message));
         throw new Error('No content in OpenAI response');
@@ -693,27 +772,45 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       if (!settings.openrouterApiKey || !settings.openrouterApiKey.trim()) {
         throw new Error('OpenRouter API key is not configured. Please open Extension Settings to enter your API key.');
       }
-      const openrouterModel = settings.openrouterModel?.trim() || 'anthropic/claude-3.5-haiku';
+      let openrouterModel = settings.openrouterModel?.trim() || 'anthropic/claude-3.5-haiku';
+      const lowerModel = openrouterModel.toLowerCase();
+      if (lowerModel.includes('tts') || lowerModel.includes('whisper') || lowerModel.includes('embedding')) {
+        openrouterModel = 'anthropic/claude-3.5-haiku';
+      }
+      const requestBody = {
+        model: openrouterModel,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }]
+      };
       let response;
       try {
         response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${settings.openrouterApiKey}`,
+            'Authorization': `Bearer ${settings.openrouterApiKey.trim()}`,
             'HTTP-Referer': 'https://github.com/aijbookmarks',
             'X-Title': 'AIJbookmarks'
           },
-          body: JSON.stringify({
-            model: openrouterModel,
-            max_tokens: maxTokens,
-            messages: [{ role: 'user', content: prompt }],
-            reasoning: {
-              max_tokens: 0
-            }
-          }),
+          body: JSON.stringify(requestBody),
           signal: controller.signal
         });
+
+        if (!response.ok && (response.status === 400 || response.status === 404) && openrouterModel !== 'anthropic/claude-3.5-haiku') {
+          console.warn(`OpenRouter model ${openrouterModel} returned ${response.status}. Retrying with fallback model anthropic/claude-3.5-haiku...`);
+          requestBody.model = 'anthropic/claude-3.5-haiku';
+          response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${settings.openrouterApiKey.trim()}`,
+              'HTTP-Referer': 'https://github.com/aijbookmarks',
+              'X-Title': 'AIJbookmarks'
+            },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal
+          });
+        }
       } catch (error) {
         console.error('Error calling OpenRouter API:', error);
         throw new Error(`Failed to call OpenRouter API: ${error.message}`);
@@ -726,7 +823,19 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       }
 
       const message = await response.json();
-      const responseText = message.choices?.[0]?.message?.content;
+      const choice = message.choices?.[0];
+      let responseText = '';
+      if (typeof choice?.message?.content === 'string') {
+        responseText = choice.message.content;
+      } else if (Array.isArray(choice?.message?.content)) {
+        responseText = choice.message.content
+          .filter(p => !p.thought && (p.type === 'text' || typeof p.text === 'string' || typeof p === 'string'))
+          .map(p => (typeof p === 'string' ? p : (p.text || '')))
+          .join('\n')
+          .trim();
+      } else if (typeof choice?.text === 'string') {
+        responseText = choice.text;
+      }
       if (!responseText) {
         console.error('No content in OpenRouter response:', JSON.stringify(message));
         throw new Error('No content in OpenRouter response');
@@ -735,76 +844,71 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       const outputTokens = message.usage?.completion_tokens ?? estimateTokensFromText(responseText);
       return { responseText, inputTokens, outputTokens, durationMs: Date.now() - startTime };
     } else if (provider === 'google-cloud') {
-      let response;
-      try {
-        const model = String(settings.googleCloudModel || '').replace(/^models\//, '') || 'gemini-2.5-flash';
-        const rawApiKey = typeof settings.googleCloudApiKey === 'string' ? settings.googleCloudApiKey.trim() : '';
-        if (!rawApiKey) {
-          throw new Error('Google Cloud API key not configured. Please configure it in Extension Settings.');
-        }
-        response = await fetch(`https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': rawApiKey
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: prompt }]
-              }
-            ],
-            generationConfig: {
-              maxOutputTokens: maxTokens,
-              responseMimeType: 'application/json'
-            }
-          }),
-          signal: controller.signal
-        });
+      const rawApiKey = typeof settings.googleCloudApiKey === 'string' ? settings.googleCloudApiKey.trim() : '';
+      if (!rawApiKey) {
+        throw new Error('Google Cloud API key not configured. Please configure it in Extension Settings.');
+      }
+      const rawModel = normalizeGoogleCloudModel(settings.googleCloudModel) || 'gemini-2.5-flash';
+      const gcModels = [...new Set([rawModel, 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'])];
 
-        if (!response.ok && response.status === 400) {
-          const errorText = await response.clone().text();
-          if (errorText.toLowerCase().includes('thinking') || errorText.includes('thinkingConfig') || errorText.includes('thinking_config') || errorText.includes('thinkingBudget')) {
-            response = await fetch(`https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': rawApiKey
-              },
-              body: JSON.stringify({
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                generationConfig: {
-                  maxOutputTokens: maxTokens,
-                  responseMimeType: 'application/json'
-                }
-              }),
-              signal: controller.signal
-            });
+      let responseText = '';
+      let inputTokens = 0;
+      let outputTokens = 0;
+      let lastErrorText = '';
+      let lastStatus = 500;
+
+      for (const model of gcModels) {
+        try {
+          const response = await fetch(`https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': rawApiKey
+            },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: { maxOutputTokens: maxTokens }
+            }),
+            signal: controller.signal
+          });
+
+          if (!response.ok) {
+            lastStatus = response.status;
+            lastErrorText = await response.text();
+            console.warn(`Google Cloud API error on model ${model} (${response.status}):`, lastErrorText);
+            continue;
           }
+
+          const data = await response.json();
+          const candidate = data.candidates?.[0];
+          const parts = candidate?.content?.parts || [];
+
+          // Filter out thought/reasoning blocks
+          const textParts = parts.filter(p => !p.thought && typeof p.text === 'string' && p.text.trim().length > 0).map(p => p.text);
+          responseText = textParts.length > 0
+            ? textParts.join('\n').trim()
+            : parts.filter(p => typeof p.text === 'string').map(p => p.text).join('\n').trim();
+
+          if (!responseText) {
+            console.warn(`Google Cloud model ${model} returned response without text content. Trying fallback model...`);
+            lastErrorText = `Model ${model} returned no text content in response`;
+            continue;
+          }
+
+          inputTokens = data.usageMetadata?.promptTokenCount ?? estimateTokensFromText(prompt);
+          outputTokens = data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(responseText);
+          break;
+        } catch (error) {
+          if (error.name === 'AbortError') throw error;
+          lastErrorText = error.message;
         }
-      } catch (error) {
-        console.error('Error calling Google Cloud API:', error);
-        if (error.name === 'AbortError') {
-          throw new Error(`Google Cloud API request timed out after ${Math.round(TIMEOUT_MS / 1000)} seconds. Try a smaller batch or a faster model.`);
-        }
-        throw new Error(`Failed to call Google Cloud API: ${error.message}`);
       }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Google Cloud API error:', response.status, errorText);
-        throw new Error(formatProviderApiError('google-cloud', response.status, errorText));
-      }
-
-      const data = await response.json();
-      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!responseText) {
-        console.error('No content in Google Cloud response:', JSON.stringify(data));
-        throw new Error('No content in Google Cloud response');
+        console.error('Google Cloud API error after trying models:', lastStatus, lastErrorText);
+        throw new Error(formatProviderApiError('google-cloud', lastStatus, lastErrorText || 'No text content returned from Google Cloud model'));
       }
-      const inputTokens = data.usageMetadata?.promptTokenCount ?? estimateTokensFromText(prompt);
-      const outputTokens = data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(responseText);
+
       return { responseText, inputTokens, outputTokens, durationMs: Date.now() - startTime };
     } else if (provider === 'gemini') {
       const geminiKey = typeof settings.geminiApiKey === 'string' ? settings.geminiApiKey.trim() : '';
@@ -812,14 +916,18 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
         throw new Error('Gemini API key not configured. Please configure it in Extension Settings.');
       }
       const rawModel = normalizeGeminiModel(settings.geminiModel) || 'gemini-2.5-flash';
-      const geminiModels = [rawModel, 'gemini-2.5-flash', 'gemini-1.5-flash'].filter(Boolean);
+      const geminiModels = [...new Set([rawModel, 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'])];
       const uniqueGeminiModels = [...new Set(geminiModels)];
 
-      let response = null;
+      let responseText = '';
+      let inputTokens = 0;
+      let outputTokens = 0;
       let lastErrorText = '';
+      let lastStatus = 500;
+
       for (const model of uniqueGeminiModels) {
         try {
-          response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -852,28 +960,44 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
             }
           }
 
-          if (response.ok) break;
-          lastErrorText = await response.text();
-          if (response.status !== 404 && response.status !== 400) break;
+          if (!response.ok) {
+            lastStatus = response.status;
+            lastErrorText = await response.text();
+            console.warn(`Gemini API error on model ${model} (${response.status}):`, lastErrorText);
+            continue;
+          }
+
+          const data = await response.json();
+          const candidate = data.candidates?.[0];
+          const parts = candidate?.content?.parts || [];
+
+          // Filter out thought/reasoning blocks (e.g. Gemini 2.0 / 2.5 thinking models where thought: true)
+          const textParts = parts.filter(p => !p.thought && typeof p.text === 'string' && p.text.trim().length > 0).map(p => p.text);
+          responseText = textParts.length > 0
+            ? textParts.join('\n').trim()
+            : parts.filter(p => typeof p.text === 'string').map(p => p.text).join('\n').trim();
+
+          // If this model returned no text (e.g. TTS / audio model), try fallback models in list
+          if (!responseText) {
+            console.warn(`Gemini model ${model} returned response without text content. Trying fallback model...`);
+            lastErrorText = `Model ${model} returned no text content in response`;
+            continue;
+          }
+
+          inputTokens = data.usageMetadata?.promptTokenCount ?? estimateTokensFromText(prompt);
+          outputTokens = data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(responseText);
+          break; // Successfully got text response!
         } catch (error) {
           if (error.name === 'AbortError') throw error;
           lastErrorText = error.message;
         }
       }
 
-      if (!response || !response.ok) {
-        console.error('Gemini API error:', response?.status, lastErrorText);
-        throw new Error(formatProviderApiError('gemini', response?.status || 500, lastErrorText));
+      if (!responseText) {
+        console.error('Gemini API error after trying models:', lastStatus, lastErrorText);
+        throw new Error(formatProviderApiError('gemini', lastStatus, lastErrorText || 'No text content returned from Gemini model'));
       }
 
-      const data = await response.json();
-      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!responseText) {
-        console.error('No content in Gemini response:', JSON.stringify(data));
-        throw new Error('No content in Gemini response');
-      }
-      const inputTokens = data.usageMetadata?.promptTokenCount ?? estimateTokensFromText(prompt);
-      const outputTokens = data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(responseText);
       return { responseText, inputTokens, outputTokens, durationMs: Date.now() - startTime };
     } else {
       if (!settings.anthropicApiKey || !settings.anthropicApiKey.trim()) {
@@ -921,12 +1045,12 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       }
 
       const message = await response.json();
-      const textContent = message.content?.find(block => block.type === 'text');
-      if (!textContent) {
+      const textBlocks = (message.content || []).filter(block => block.type === 'text');
+      const responseText = textBlocks.map(b => b.text).join('\n').trim();
+      if (!responseText) {
         console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
         throw new Error('No text content in Claude response');
       }
-      const responseText = textContent.text;
       const inputTokens = message.usage?.input_tokens ?? estimateTokensFromText(prompt);
       const outputTokens = message.usage?.output_tokens ?? estimateTokensFromText(responseText);
       return { responseText, inputTokens, outputTokens, durationMs: Date.now() - startTime };
@@ -1003,20 +1127,10 @@ Please respond in JSON format:
 
   const responseText = await callAI(prompt, settings, provider);
 
-  // Parse the JSON response
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
+  const result = extractJsonPayload(responseText, 'object');
+  if (!result) {
     console.error('Could not find JSON in AI response. Response text:', responseText);
-    throw new Error('Could not find JSON in AI response');
-  }
-
-  let result;
-  try {
-    result = JSON.parse(jsonMatch[0]);
-  } catch (error) {
-    console.error('Error parsing JSON from AI response:', error);
-    console.error('JSON string:', jsonMatch[0]);
-    throw new Error(`Failed to parse AI response: ${error.message}`);
+    throw new Error('Could not find valid JSON object in AI response');
   }
 
   // If not an article and no matched category, set to "Other"
