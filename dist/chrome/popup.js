@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       label.title = 'Bookmarks API is not supported on Firefox for Android (Mozilla Bug 1796596).';
       const smallNote = document.createElement('span');
       smallNote.style.fontSize = '11px';
-      smallNote.style.color = '#888';
+      smallNote.style.color = 'var(--text-secondary)';
       smallNote.style.marginLeft = '4px';
       smallNote.textContent = '(Desktop only)';
       label.appendChild(smallNote);
@@ -306,7 +306,7 @@ function showUndoButton(bookmarkId) {
   undoDiv.style.cssText = 'padding: 4px 12px 0; text-align: right;';
 
   const btn = document.createElement('button');
-  btn.style.cssText = 'background: none; border: none; color: #1a73e8; font-size: 12px; font-weight: 500; cursor: pointer; padding: 4px 0; font-family: inherit;';
+  btn.style.cssText = 'background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 500; cursor: pointer; padding: 4px 0; font-family: inherit;';
 
   let secondsLeft = 7;
   const updateLabel = () => { btn.textContent = `Undo (${secondsLeft}s)`; };

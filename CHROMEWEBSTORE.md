@@ -39,7 +39,7 @@ PERMISSIONS
 SUPPORT
 Found a bug? Have a suggestion? Open an issue on our GitHub repository: https://github.com/AIJosue/AIJbookmarks
 
-Version 3.4.2 — Streamlined AI provider requests to strictly respect user model choice without silent fallbacks or thinking mode injection, and filtered non-text models from load lists.
+Version 3.4.3 — Redesigned extension UI color palette strictly around the Apple Human Interface Guidelines (HIG) with full dark mode support, system colors, and dynamic tokens.
 
 **Category**
 Productivity
@@ -139,6 +139,7 @@ https://github.com/AIJosue/AIJbookmarks
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 3.4.3 | 2026-11-07 | Redesigned extension UI color palette strictly around the Apple Human Interface Guidelines (HIG) with full dark mode support, system colors, and dynamic tokens. | Draft |
 | 3.4.2 | 2026-11-07 | Streamlined AI provider calls to strictly respect user model choice without silent fallbacks or thinking mode injection, and filtered non-text models from load lists. | Draft |
 | 3.4.1 | 2026-11-07 | Fixed Gemini API 400 invalid argument error ("Thinking is not enabled for this model") by eliminating unneeded thinkingConfig payloads. | Draft |
 | 3.4.0 | 2026-11-07 | Streamlined AI configuration for cloud providers, on-demand model loading with "Load Models", removed local model bloat and dependencies, enhanced desktop Chrome and Firefox support. | Draft |

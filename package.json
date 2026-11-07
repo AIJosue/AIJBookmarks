@@ -1,6 +1,6 @@
 {
   "name": "aijbookmarks",
-  "version": "3.4.2",
+  "version": "3.4.3",
   "description": "AI-powered bookmark organizer Chrome extension",
   "private": true,
   "type": "module",

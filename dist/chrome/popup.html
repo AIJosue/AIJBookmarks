@@ -14,12 +14,144 @@
       box-sizing: border-box;
     }
 
+    :root {
+      /* Apple HIG System Colors (Light Mode) - https://developer.apple.com/design/human-interface-guidelines/color */
+      --apple-blue: #007AFF;
+      --apple-blue-hover: #0062CC;
+      --apple-purple: #AF52DE;
+      --apple-pink: #FF2D55;
+      --apple-red: #FF3B30;
+      --apple-red-hover: #D7261E;
+      --apple-orange: #FF9500;
+      --apple-yellow: #FFCC00;
+      --apple-green: #34C759;
+      --apple-mint: #00C7BE;
+      --apple-teal: #30B0C7;
+      --apple-cyan: #32ADE6;
+      --apple-indigo: #5856D6;
+
+      --apple-gray: #8E8E93;
+      --apple-gray-2: #AEAEB2;
+      --apple-gray-3: #C7C7CC;
+      --apple-gray-4: #D1D1D6;
+      --apple-gray-5: #E5E5EA;
+      --apple-gray-6: #F2F2F7;
+
+      /* Apple HIG Semantic Tokens (Light Mode) */
+      --bg-primary: #FFFFFF;
+      --bg-secondary: #F2F2F7;
+      --bg-tertiary: #FFFFFF;
+      --bg-grouped: #F2F2F7;
+      --bg-card: #FFFFFF;
+
+      --text-primary: #000000;
+      --text-secondary: rgba(60, 60, 67, 0.60);
+      --text-tertiary: rgba(60, 60, 67, 0.30);
+      --text-quaternary: rgba(60, 60, 67, 0.18);
+
+      --separator: rgba(60, 60, 67, 0.29);
+      --separator-opaque: #C6C6C8;
+
+      --fill-primary: rgba(120, 120, 128, 0.20);
+      --fill-secondary: rgba(120, 120, 128, 0.16);
+      --fill-tertiary: rgba(118, 118, 128, 0.12);
+      --fill-quaternary: rgba(116, 116, 128, 0.08);
+
+      --accent: var(--apple-blue);
+      --accent-hover: var(--apple-blue-hover);
+      --danger: var(--apple-red);
+      --danger-hover: var(--apple-red-hover);
+
+      --tint-blue-bg: rgba(0, 122, 255, 0.12);
+      --tint-blue-border: rgba(0, 122, 255, 0.30);
+      --tint-blue-text: #007AFF;
+
+      --tint-green-bg: rgba(52, 199, 89, 0.12);
+      --tint-green-border: rgba(52, 199, 89, 0.30);
+      --tint-green-text: #34C759;
+
+      --tint-orange-bg: rgba(255, 149, 0, 0.12);
+      --tint-orange-border: rgba(255, 149, 0, 0.30);
+      --tint-orange-text: #FF9500;
+
+      --tint-red-bg: rgba(255, 59, 48, 0.12);
+      --tint-red-border: rgba(255, 59, 48, 0.30);
+      --tint-red-text: #FF3B30;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        /* Apple HIG System Colors (Dark Mode) - https://developer.apple.com/design/human-interface-guidelines/color */
+        --apple-blue: #0A84FF;
+        --apple-blue-hover: #409CFF;
+        --apple-purple: #BF5AF2;
+        --apple-pink: #FF375F;
+        --apple-red: #FF453A;
+        --apple-red-hover: #FF6961;
+        --apple-orange: #FF9F0A;
+        --apple-yellow: #FFD60A;
+        --apple-green: #30D158;
+        --apple-mint: #63E6E2;
+        --apple-teal: #40C8E0;
+        --apple-cyan: #64D2FF;
+        --apple-indigo: #5E5CE6;
+
+        --apple-gray: #8E8E93;
+        --apple-gray-2: #636366;
+        --apple-gray-3: #48484A;
+        --apple-gray-4: #3A3A3C;
+        --apple-gray-5: #2C2C2E;
+        --apple-gray-6: #1C1C1E;
+
+        /* Apple HIG Semantic Tokens (Dark Mode) */
+        --bg-primary: #000000;
+        --bg-secondary: #1C1C1E;
+        --bg-tertiary: #2C2C2E;
+        --bg-grouped: #000000;
+        --bg-card: #1C1C1E;
+
+        --text-primary: #FFFFFF;
+        --text-secondary: rgba(235, 235, 245, 0.60);
+        --text-tertiary: rgba(235, 235, 245, 0.30);
+        --text-quaternary: rgba(235, 235, 245, 0.16);
+
+        --separator: rgba(84, 84, 88, 0.60);
+        --separator-opaque: #38383A;
+
+        --fill-primary: rgba(120, 120, 128, 0.36);
+        --fill-secondary: rgba(120, 120, 128, 0.32);
+        --fill-tertiary: rgba(118, 118, 128, 0.24);
+        --fill-quaternary: rgba(118, 118, 128, 0.18);
+
+        --accent: var(--apple-blue);
+        --accent-hover: var(--apple-blue-hover);
+        --danger: var(--apple-red);
+        --danger-hover: var(--apple-red-hover);
+
+        --tint-blue-bg: rgba(10, 132, 255, 0.15);
+        --tint-blue-border: rgba(10, 132, 255, 0.35);
+        --tint-blue-text: #0A84FF;
+
+        --tint-green-bg: rgba(48, 209, 88, 0.15);
+        --tint-green-border: rgba(48, 209, 88, 0.35);
+        --tint-green-text: #30D158;
+
+        --tint-orange-bg: rgba(255, 159, 10, 0.15);
+        --tint-orange-border: rgba(255, 159, 10, 0.35);
+        --tint-orange-text: #FF9F0A;
+
+        --tint-red-bg: rgba(255, 69, 58, 0.15);
+        --tint-red-border: rgba(255, 69, 58, 0.35);
+        --tint-red-text: #FF453A;
+      }
+    }
+
     body {
       width: 360px;
-      font-family: 'Outfit', 'Segoe UI', Roboto, -apple-system, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Outfit', 'Segoe UI', Roboto, sans-serif;
       font-size: 13px;
-      color: #202124;
-      background: #fff;
+      color: var(--text-primary);
+      background: var(--bg-card);
     }
 
     /* Premium Header */
@@ -38,7 +170,7 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
 
     .header-icon img {
@@ -51,20 +183,20 @@
     .header-text h1 {
       font-size: 16px;
       font-weight: 600;
-      color: #202124;
+      color: var(--text-primary);
       letter-spacing: -0.2px;
     }
 
     .header-text p {
       font-size: 12px;
-      color: #5f6368;
+      color: var(--text-secondary);
       margin-top: 1px;
     }
 
-    /* Options Section with MD3 Switches */
+    /* Options Section with Switches */
     .options-section {
       padding: 6px 0;
-      border-bottom: 1px solid #f1f3f4;
+      border-bottom: 1px solid var(--separator);
     }
 
     .option-row {
@@ -77,13 +209,13 @@
     }
 
     .option-row:hover {
-      background: #f8f9fa;
+      background: var(--fill-tertiary);
     }
 
     .option-label {
       font-size: 13px;
       font-weight: 500;
-      color: #3c4043;
+      color: var(--text-primary);
     }
 
     .toggle {
@@ -105,39 +237,33 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: #e1e2e4;
+      background: var(--apple-gray-4);
       border-radius: 10px;
-      transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s;
-      border: 1px solid #74777f;
+      transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .toggle-slider:before {
       position: absolute;
       content: "";
-      height: 12px;
-      width: 12px;
-      left: 3px;
-      bottom: 3px;
-      background: #74777f;
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background: #ffffff;
       border-radius: 50%;
-      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.15s, height 0.15s, background-color 0.2s;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .toggle input:checked + .toggle-slider {
-      background: #1a73e8;
-      border-color: #1a73e8;
+      background: var(--apple-green);
     }
 
     .toggle input:checked + .toggle-slider:before {
       transform: translateX(16px);
-      background: #fff;
-      height: 14px;
-      width: 14px;
-      left: 2px;
-      bottom: 2px;
     }
 
-    /* Premium Pill Buttons */
+    /* Pill Buttons */
     .actions {
       padding: 16px;
       display: flex;
@@ -161,30 +287,29 @@
     }
 
     .btn-primary {
-      background: #1a73e8;
-      color: white;
+      background: var(--accent);
+      color: #ffffff;
     }
 
     .btn-primary:hover:not(:disabled) {
-      background: #1557b0;
-      box-shadow: 0 2px 4px rgba(26, 115, 232, 0.25);
+      background: var(--accent-hover);
+      box-shadow: 0 2px 4px var(--tint-blue-border);
     }
 
     .btn-primary:disabled {
-      background: #f1f3f4;
-      color: #9aa0a6;
+      background: var(--fill-quaternary);
+      color: var(--text-tertiary);
       cursor: not-allowed;
     }
 
     .btn-secondary {
-      background: #fff;
-      color: #1a73e8;
-      border: 1px solid #dadce0;
+      background: var(--fill-quaternary);
+      color: var(--accent);
+      border: 1px solid var(--separator-opaque);
     }
 
     .btn-secondary:hover {
-      background: #f8f9fa;
-      border-color: #1a73e8;
+      background: var(--fill-tertiary);
     }
 
     /* Status Section */
@@ -209,8 +334,9 @@
     }
 
     .status.loading {
-      background: #e8f0fe;
-      color: #1967d2;
+      background: var(--tint-blue-bg);
+      color: var(--tint-blue-text);
+      border: 1px solid var(--tint-blue-border);
     }
 
     .status.loading .status-icon {
@@ -223,25 +349,28 @@
     }
 
     .status.success {
-      background: #e6f4ea;
-      color: #137333;
+      background: var(--tint-green-bg);
+      color: var(--tint-green-text);
+      border: 1px solid var(--tint-green-border);
     }
 
     .status.error {
-      background: #fce8e6;
-      color: #c5221f;
+      background: var(--tint-red-bg);
+      color: var(--tint-red-text);
+      border: 1px solid var(--tint-red-border);
     }
 
     .status.warning {
-      background: #fef7e0;
-      color: #b05a00;
+      background: var(--tint-orange-bg);
+      color: var(--tint-orange-text);
+      border: 1px solid var(--tint-orange-border);
     }
 
-    /* Premium Results Panels */
+    /* Results Panels */
     .results-section {
       display: none;
-      border-top: 1px solid #f1f3f4;
-      background: #fafafa;
+      border-top: 1px solid var(--separator);
+      background: var(--bg-grouped);
     }
 
     .results-section.visible {
@@ -250,7 +379,7 @@
 
     .result-item {
       padding: 14px 16px;
-      border-bottom: 1px solid #f1f3f4;
+      border-bottom: 1px solid var(--separator);
     }
 
     .result-item:last-child {
@@ -260,7 +389,7 @@
     .result-label {
       font-size: 10px;
       font-weight: 600;
-      color: #80868b;
+      color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.8px;
       margin-bottom: 6px;
@@ -268,19 +397,19 @@
 
     .result-value {
       font-size: 13px;
-      color: #202124;
+      color: var(--text-primary);
       line-height: 1.4;
     }
 
     .result-value.path {
-      font-family: 'Roboto Mono', monospace;
+      font-family: -apple-system-ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
       font-size: 11px;
-      background: #e8f0fe;
-      color: #1967d2;
+      background: var(--tint-blue-bg);
+      color: var(--tint-blue-text);
       padding: 4px 10px;
       border-radius: 12px;
       display: inline-block;
-      border: 1px solid rgba(25, 103, 210, 0.12);
+      border: 1px solid var(--tint-blue-border);
     }
 
     .tags {
@@ -291,8 +420,8 @@
     }
 
     .tag {
-      background: #f1f3f4;
-      color: #5f6368;
+      background: var(--fill-tertiary);
+      color: var(--text-secondary);
       padding: 3px 8px;
       border-radius: 12px;
       font-size: 11px;
@@ -312,25 +441,25 @@
     }
 
     .integration-status .dot.success {
-      background: #34a853;
+      background: var(--apple-green);
     }
 
     .integration-status .dot.error {
-      background: #ea4335;
+      background: var(--apple-red);
     }
 
     /* Pipe-less Modern Navigation Footer */
     .footer {
       padding: 12px 16px;
-      border-top: 1px solid #f1f3f4;
+      border-top: 1px solid var(--separator);
       display: flex;
       justify-content: space-around;
-      background: #f8f9fa;
+      background: var(--bg-grouped);
       align-items: center;
     }
 
     .footer a {
-      color: #5f6368;
+      color: var(--text-secondary);
       text-decoration: none;
       font-size: 12px;
       font-weight: 600;
@@ -341,7 +470,7 @@
     }
 
     .footer a:hover {
-      color: #1a73e8;
+      color: var(--accent);
     }
 
     .settings-cog {
@@ -352,173 +481,19 @@
     }
 
     .settings-cog:hover {
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: var(--fill-tertiary);
     }
 
     .cog-icon {
       width: 18px;
       height: 18px;
-      fill: #5f6368;
+      fill: var(--text-secondary);
       transition: fill 0.15s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .settings-cog:hover .cog-icon {
-      fill: #1a73e8;
+      fill: var(--accent);
       transform: rotate(45deg);
-    }
-
-    /* Apple HIG Dark Mode Styles */
-    @media (prefers-color-scheme: dark) {
-      body {
-        background: #1c1c1e;
-        color: #ffffff;
-      }
-
-      .header-icon {
-        background: linear-gradient(135deg, #0091ff, #007ae6);
-        box-shadow: 0 2px 6px rgba(0, 145, 255, 0.35);
-      }
-
-      .header-text h1 {
-        color: #ffffff;
-      }
-
-      .header-text p {
-        color: #8e8e93;
-      }
-
-      .options-section {
-        border-bottom-color: #383838;
-      }
-
-      .option-row:hover {
-        background: #2c2c2e;
-      }
-
-      .option-label {
-        color: #ffffff;
-      }
-
-      .toggle-slider {
-        background: #3a3a3c;
-      }
-
-      .toggle-slider:before {
-        background: #8e8e93;
-      }
-
-      .toggle input:checked + .toggle-slider {
-        background: #30d158;
-      }
-
-      .toggle input:checked + .toggle-slider:before {
-        background: #ffffff;
-      }
-
-      .btn-primary {
-        background: #0091ff;
-        color: #ffffff;
-      }
-
-      .btn-primary:not(:disabled):hover {
-        background: #007ae6;
-      }
-
-      .btn-primary:disabled {
-        background: #2c2c2e;
-        color: #636366;
-      }
-
-      .btn-secondary {
-        background: #3a3a3c;
-        color: #0091ff;
-        border-color: #383838;
-      }
-
-      .btn-secondary:hover {
-        background: #444446;
-        border-color: #3cd3fe;
-        color: #3cd3fe;
-      }
-
-      .status.loading {
-        background: rgba(0, 145, 255, 0.15);
-        color: #3cd3fe;
-        border: 1px solid rgba(0, 145, 255, 0.3);
-      }
-
-      .status.success {
-        background: rgba(48, 209, 88, 0.15);
-        color: #30d158;
-        border: 1px solid rgba(48, 209, 88, 0.3);
-      }
-
-      .status.error {
-        background: rgba(255, 66, 69, 0.15);
-        color: #ff4245;
-        border: 1px solid rgba(255, 66, 69, 0.3);
-      }
-
-      .status.warning {
-        background: rgba(255, 159, 10, 0.15);
-        color: #ff9f0a;
-        border: 1px solid rgba(255, 159, 10, 0.3);
-      }
-
-      .results-section {
-        border-top-color: #383838;
-        background: #1e1e1e;
-      }
-
-      .result-item {
-        border-bottom-color: #2c2c2e;
-      }
-
-      .result-label {
-        color: #8e8e93;
-      }
-
-      .result-value {
-        color: #ffffff;
-      }
-
-      .result-value.path {
-        background: rgba(0, 145, 255, 0.15);
-        color: #3cd3fe;
-        border-color: rgba(0, 145, 255, 0.3);
-      }
-
-      .tag {
-        background: #2c2c2e;
-        color: #8e8e93;
-        border: 1px solid #383838;
-      }
-
-      .footer {
-        border-top-color: #383838;
-        background: #1c1c1e;
-      }
-
-      .footer a {
-        color: #8e8e93;
-      }
-
-      .footer a:hover {
-        color: #0091ff;
-      }
-
-      .settings-cog:hover {
-        background-color: #2c2c2e;
-      }
-
-      .cog-icon {
-        fill: #8e8e93;
-      }
-
-      .settings-cog:hover .cog-icon {
-        fill: #0091ff;
-      }
-    }
     }
   </style>
 </head>

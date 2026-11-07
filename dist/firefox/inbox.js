@@ -112,16 +112,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       sortModelDisplay.textContent = `☁️ ${providerName}${modelName}`;
       if (sortModelBadge) {
         sortModelBadge.textContent = 'Active';
-        sortModelBadge.style.background = '#e6f4ea';
-        sortModelBadge.style.color = '#137333';
+        sortModelBadge.className = 'badge badge-success';
         sortModelBadge.style.display = 'inline-block';
       }
     } else {
       sortModelDisplay.textContent = 'Not configured';
       if (sortModelBadge) {
         sortModelBadge.textContent = 'Setup required';
-        sortModelBadge.style.background = '#fef7e0';
-        sortModelBadge.style.color = '#b06000';
+        sortModelBadge.className = 'badge badge-warning';
         sortModelBadge.style.display = 'inline-block';
       }
     }
@@ -138,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const a = document.createElement('a');
       a.href = '#';
       a.id = 'openSettingsAlertLink';
-      a.style.color = '#1a73e8';
+      a.style.color = 'var(--accent)';
       a.style.fontWeight = '600';
       a.style.textDecoration = 'underline';
       a.textContent = 'configure an API key in Settings';

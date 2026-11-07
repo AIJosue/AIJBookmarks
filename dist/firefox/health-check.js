@@ -176,7 +176,7 @@ function renderSummary(summary, lastRun, isLive = false) {
   if (label) {
     if (isLive) {
       label.textContent = 'Scanning bookmarks in real-time…';
-      label.style.color = '#1a73e8';
+      label.style.color = 'var(--accent)';
       label.style.fontWeight = '500';
     } else if (lastRun) {
       const d = new Date(lastRun);

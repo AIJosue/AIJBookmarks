@@ -448,10 +448,10 @@ function syncContextWindowPresetFromInput(provider) {
 function updateSliderTicksHighlight(activeIndex) {
   document.querySelectorAll('.slider-ticks span').forEach((span, idx) => {
     if (idx === activeIndex) {
-      span.style.color = '#1a73e8';
+      span.style.color = 'var(--accent)';
       span.style.fontWeight = '700';
     } else {
-      span.style.color = '#5f6368';
+      span.style.color = 'var(--text-secondary)';
       span.style.fontWeight = 'normal';
     }
   });
