@@ -2,18 +2,18 @@
 const DEFAULT_SETTINGS = {
   aiProvider: 'anthropic',
   anthropicApiKey: '',
-  anthropicModel: 'claude-3-5-haiku-20241022',
+  anthropicModel: '',
   openaiApiKey: '',
   openaiBaseUrl: 'https://api.openai.com/v1',
-  openaiModel: 'gpt-4o-mini',
+  openaiModel: '',
   openaiCustomModel: '',
   modelContextWindow: 131072,
   openrouterApiKey: '',
-  openrouterModel: 'anthropic/claude-3.5-haiku',
+  openrouterModel: '',
   geminiApiKey: '',
-  geminiModel: 'gemini-2.5-flash',
+  geminiModel: '',
   googleCloudApiKey: '',
-  googleCloudModel: 'gemini-2.5-flash',
+  googleCloudModel: '',
   instapaperUsername: '',
   instapaperPassword: '',
   todoistApiToken: '',
@@ -681,24 +681,25 @@ async function loadSettings() {
     }
 
     if (openaiSelect) {
-      const hasOption = Array.from(openaiSelect.options).some(opt => opt.value === openaiModel);
-      if (hasOption) {
-        openaiSelect.value = openaiModel;
-        if (customGroup) customGroup.style.display = openaiModel === 'custom' ? 'block' : 'none';
-      } else {
-        const opt = document.createElement('option');
-        opt.value = openaiModel;
-        opt.textContent = openaiModel;
-        opt.selected = true;
-        openaiSelect.insertBefore(opt, openaiSelect.firstChild);
-        if (customGroup) customGroup.style.display = 'none';
+      if (openaiModel) {
+        const hasOption = Array.from(openaiSelect.options).some(opt => opt.value === openaiModel);
+        if (hasOption) {
+          openaiSelect.value = openaiModel;
+        } else {
+          const opt = document.createElement('option');
+          opt.value = openaiModel;
+          opt.textContent = openaiModel;
+          opt.selected = true;
+          openaiSelect.appendChild(opt);
+        }
       }
+      if (customGroup) customGroup.style.display = openaiModel === 'custom' ? 'block' : 'none';
     }
 
-    ensureSelectHasValue('openrouterModel', settings.openrouterModel || 'anthropic/claude-3.5-haiku');
-    ensureSelectHasValue('geminiModel', settings.geminiModel || 'gemini-2.5-flash');
-    ensureSelectHasValue('googleCloudModel', settings.googleCloudModel || 'gemini-2.5-flash');
-    ensureSelectHasValue('anthropicModel', settings.anthropicModel || 'claude-3-5-haiku-20241022');
+    if (settings.openrouterModel) ensureSelectHasValue('openrouterModel', settings.openrouterModel);
+    if (settings.geminiModel) ensureSelectHasValue('geminiModel', settings.geminiModel);
+    if (settings.googleCloudModel) ensureSelectHasValue('googleCloudModel', settings.googleCloudModel);
+    if (settings.anthropicModel) ensureSelectHasValue('anthropicModel', settings.anthropicModel);
 
     const modelContextVal = snapToNearestBinaryContext(settings.modelContextWindow || 131072);
     document.getElementById('modelContextWindow').value = modelContextVal;
@@ -767,13 +768,6 @@ async function loadSettings() {
     renderDomainRules();
 
     syncToggleDependencies();
-
-    // Only fetch models for the active provider; fetching all providers on every open is slow on mobile.
-    if (currentProvider === 'openrouter' && settings.openrouterApiKey) loadOpenRouterModels(settings.openrouterModel);
-    if (currentProvider === 'openai' && (settings.openaiApiKey || (settings.openaiBaseUrl && !settings.openaiBaseUrl.includes('api.openai.com')))) loadOpenaiModels(false, settings.openaiModel);
-    if (currentProvider === 'gemini' && settings.geminiApiKey) loadGeminiModels(false, settings.geminiModel, false);
-    if (currentProvider === 'google-cloud' && settings.googleCloudApiKey) loadGeminiModels(false, settings.googleCloudModel, true);
-    if (currentProvider === 'anthropic' && settings.anthropicApiKey) loadAnthropicModels(false, settings.anthropicModel);
   } catch (error) {
     console.error('Error loading settings:', error);
     showStatus('Error loading settings: ' + error.message, 'error');
@@ -1035,7 +1029,7 @@ async function loadOpenaiModels(_forceRefresh = false, preselectedModel = null) 
     showStatus(`Error loading models from ${baseUrl}: ` + error.message, 'error');
   } finally {
     if (btn) {
-      btn.textContent = 'Fetch Models';
+      btn.textContent = 'Load Models';
       btn.disabled = false;
     }
     select.disabled = false;
@@ -1177,7 +1171,7 @@ async function loadGeminiModels(forceRefresh = false, preselectedModel = null, i
     }
   } finally {
     if (btn) {
-      btn.textContent = 'Fetch Models';
+      btn.textContent = 'Load Models';
       btn.disabled = false;
     }
     select.disabled = false;
