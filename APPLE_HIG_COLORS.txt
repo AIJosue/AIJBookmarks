@@ -1,0 +1,352 @@
+================================================================================
+APPLE HUMAN INTERFACE GUIDELINES (HIG) - COLOR SYSTEM REFERENCE
+================================================================================
+Official HIG Reference:
+https://developer.apple.com/design/human-interface-guidelines/color
+================================================================================
+
+This reference guide provides the complete, official Apple HIG color palette,
+semantic tokens, and drop-in code templates (CSS variables and JSON) to apply
+Apple's native Light and Dark mode color systems to any web, extension, desktop,
+or mobile application.
+
+
+================================================================================
+1. SYSTEM COLORS PALETTE (LIGHT & DARK MODES)
+================================================================================
+
+Color Name   | Light Mode Hex | Light Mode RGB      | Dark Mode Hex | Dark Mode RGB
+-------------+----------------+---------------------+---------------+--------------------
+Blue         | #007AFF        | rgb(0, 122, 255)    | #0A84FF       | rgb(10, 132, 255)
+Purple       | #AF52DE        | rgb(175, 82, 222)   | #BF5AF2       | rgb(191, 90, 242)
+Pink         | #FF2D55        | rgb(255, 45, 85)    | #FF375F       | rgb(255, 55, 95)
+Red          | #FF3B30        | rgb(255, 59, 48)    | #FF453A       | rgb(255, 69, 58)
+Orange       | #FF9500        | rgb(255, 149, 0)    | #FF9F0A       | rgb(255, 159, 10)
+Yellow       | #FFCC00        | rgb(255, 204, 0)    | #FFD60A       | rgb(255, 214, 10)
+Green        | #34C759        | rgb(52, 199, 89)    | #30D158       | rgb(48, 209, 88)
+Mint         | #00C7BE        | rgb(0, 199, 190)    | #63E6E2       | rgb(99, 230, 226)
+Teal         | #30B0C7        | rgb(48, 176, 199)   | #40C8E0       | rgb(64, 200, 224)
+Cyan         | #32ADE6        | rgb(50, 173, 230)   | #64D2FF       | rgb(100, 210, 255)
+Indigo       | #5856D6        | rgb(88, 86, 214)    | #5E5CE6       | rgb(94, 92, 230)
+
+
+================================================================================
+2. SYSTEM GRAYS PALETTE
+================================================================================
+
+Gray Tier     | Light Mode Hex | Light Mode RGB      | Dark Mode Hex | Dark Mode RGB
+--------------+----------------+---------------------+---------------+--------------------
+System Gray   | #8E8E93        | rgb(142, 142, 147)  | #8E8E93       | rgb(142, 142, 147)
+System Gray 2 | #AEAEB2        | rgb(174, 174, 178)  | #636366       | rgb(99, 99, 102)
+System Gray 3 | #C7C7CC        | rgb(199, 199, 204)  | #48484A       | rgb(72, 72, 74)
+System Gray 4 | #D1D1D6        | rgb(209, 209, 214)  | #3A3A3C       | rgb(58, 58, 60)
+System Gray 5 | #E5E5EA        | rgb(229, 229, 234)  | #2C2C2E       | rgb(44, 44, 46)
+System Gray 6 | #F2F2F7        | rgb(242, 242, 247)  | #1C1C1E       | rgb(28, 28, 30)
+
+
+================================================================================
+3. SEMANTIC BACKGROUNDS, LABELS & SEPARATORS
+================================================================================
+
+Element               | Light Mode                              | Dark Mode
+----------------------+-----------------------------------------+-----------------------------------------
+Page Background       | #F2F2F7 (System Gray 6 / Grouped)       | #000000 (Pure Black)
+Card / Container Bg   | #FFFFFF (Pure White)                    | #1C1C1E (System Gray 6 Dark)
+Elevated Card Bg      | #FFFFFF                                 | #2C2C2E (System Gray 5 Dark)
+Primary Text (Label)  | #000000 (Pure Black)                    | #FFFFFF (Pure White)
+Secondary Text        | rgba(60, 60, 67, 0.60)                  | rgba(235, 235, 245, 0.60)
+Tertiary Text         | rgba(60, 60, 67, 0.30)                  | rgba(235, 235, 245, 0.30)
+Quaternary Text       | rgba(60, 60, 67, 0.18)                  | rgba(235, 235, 245, 0.16)
+Separator (Border)    | rgba(60, 60, 67, 0.29) / #C6C6C8 (opaque)| rgba(84, 84, 88, 0.60) / #38383A (opaque)
+Fills (Subtle/Hover)  | rgba(120, 120, 128, 0.08 to 0.20)       | rgba(120, 120, 128, 0.18 to 0.36)
+
+
+================================================================================
+4. DROP-IN CSS STYLESHEET (COPY & PASTE INTO ANY WEB PROJECT)
+================================================================================
+
+/* ==========================================================================
+   Apple HIG Color Tokens - Drop-in CSS
+   ========================================================================== */
+
+:root {
+  /* Apple HIG System Colors (Light Mode) */
+  --apple-blue: #007AFF;
+  --apple-blue-hover: #0062CC;
+  --apple-purple: #AF52DE;
+  --apple-pink: #FF2D55;
+  --apple-red: #FF3B30;
+  --apple-red-hover: #D7261E;
+  --apple-orange: #FF9500;
+  --apple-yellow: #FFCC00;
+  --apple-green: #34C759;
+  --apple-mint: #00C7BE;
+  --apple-teal: #30B0C7;
+  --apple-cyan: #32ADE6;
+  --apple-indigo: #5856D6;
+
+  /* Apple HIG System Grays (Light Mode) */
+  --apple-gray: #8E8E93;
+  --apple-gray-2: #AEAEB2;
+  --apple-gray-3: #C7C7CC;
+  --apple-gray-4: #D1D1D6;
+  --apple-gray-5: #E5E5EA;
+  --apple-gray-6: #F2F2F7;
+
+  /* Apple HIG Semantic Tokens (Light Mode) */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F2F2F7;
+  --bg-tertiary: #FFFFFF;
+  --bg-grouped: #F2F2F7;
+  --bg-card: #FFFFFF;
+
+  --text-primary: #000000;
+  --text-secondary: rgba(60, 60, 67, 0.60);
+  --text-tertiary: rgba(60, 60, 67, 0.30);
+  --text-quaternary: rgba(60, 60, 67, 0.18);
+
+  --separator: rgba(60, 60, 67, 0.29);
+  --separator-opaque: #C6C6C8;
+
+  --fill-primary: rgba(120, 120, 128, 0.20);
+  --fill-secondary: rgba(120, 120, 128, 0.16);
+  --fill-tertiary: rgba(118, 118, 128, 0.12);
+  --fill-quaternary: rgba(116, 116, 128, 0.08);
+
+  --accent: var(--apple-blue);
+  --accent-hover: var(--apple-blue-hover);
+  --danger: var(--apple-red);
+  --danger-hover: var(--apple-red-hover);
+
+  /* Tinted Pill / Badge Tokens (Light Mode) */
+  --tint-blue-bg: rgba(0, 122, 255, 0.12);
+  --tint-blue-border: rgba(0, 122, 255, 0.30);
+  --tint-blue-text: #007AFF;
+
+  --tint-green-bg: rgba(52, 199, 89, 0.12);
+  --tint-green-border: rgba(52, 199, 89, 0.30);
+  --tint-green-text: #34C759;
+
+  --tint-orange-bg: rgba(255, 149, 0, 0.12);
+  --tint-orange-border: rgba(255, 149, 0, 0.30);
+  --tint-orange-text: #FF9500;
+
+  --tint-red-bg: rgba(255, 59, 48, 0.12);
+  --tint-red-border: rgba(255, 59, 48, 0.30);
+  --tint-red-text: #FF3B30;
+
+  --tint-purple-bg: rgba(175, 82, 222, 0.12);
+  --tint-purple-border: rgba(175, 82, 222, 0.30);
+  --tint-purple-text: #AF52DE;
+
+  --tint-teal-bg: rgba(48, 176, 199, 0.12);
+  --tint-teal-border: rgba(48, 176, 199, 0.30);
+  --tint-teal-text: #30B0C7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Apple HIG System Colors (Dark Mode) */
+    --apple-blue: #0A84FF;
+    --apple-blue-hover: #409CFF;
+    --apple-purple: #BF5AF2;
+    --apple-pink: #FF375F;
+    --apple-red: #FF453A;
+    --apple-red-hover: #FF6961;
+    --apple-orange: #FF9F0A;
+    --apple-yellow: #FFD60A;
+    --apple-green: #30D158;
+    --apple-mint: #63E6E2;
+    --apple-teal: #40C8E0;
+    --apple-cyan: #64D2FF;
+    --apple-indigo: #5E5CE6;
+
+    /* Apple HIG System Grays (Dark Mode) */
+    --apple-gray: #8E8E93;
+    --apple-gray-2: #636366;
+    --apple-gray-3: #48484A;
+    --apple-gray-4: #3A3A3C;
+    --apple-gray-5: #2C2C2E;
+    --apple-gray-6: #1C1C1E;
+
+    /* Apple HIG Semantic Tokens (Dark Mode) */
+    --bg-primary: #000000;
+    --bg-secondary: #1C1C1E;
+    --bg-tertiary: #2C2C2E;
+    --bg-grouped: #000000;
+    --bg-card: #1C1C1E;
+
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(235, 235, 245, 0.60);
+    --text-tertiary: rgba(235, 235, 245, 0.30);
+    --text-quaternary: rgba(235, 235, 245, 0.16);
+
+    --separator: rgba(84, 84, 88, 0.60);
+    --separator-opaque: #38383A;
+
+    --fill-primary: rgba(120, 120, 128, 0.36);
+    --fill-secondary: rgba(120, 120, 128, 0.32);
+    --fill-tertiary: rgba(118, 118, 128, 0.24);
+    --fill-quaternary: rgba(118, 118, 128, 0.18);
+
+    --accent: var(--apple-blue);
+    --accent-hover: var(--apple-blue-hover);
+    --danger: var(--apple-red);
+    --danger-hover: var(--apple-red-hover);
+
+    /* Tinted Pill / Badge Tokens (Dark Mode) */
+    --tint-blue-bg: rgba(10, 132, 255, 0.15);
+    --tint-blue-border: rgba(10, 132, 255, 0.35);
+    --tint-blue-text: #0A84FF;
+
+    --tint-green-bg: rgba(48, 209, 88, 0.15);
+    --tint-green-border: rgba(48, 209, 88, 0.35);
+    --tint-green-text: #30D158;
+
+    --tint-orange-bg: rgba(255, 159, 10, 0.15);
+    --tint-orange-border: rgba(255, 159, 10, 0.35);
+    --tint-orange-text: #FF9F0A;
+
+    --tint-red-bg: rgba(255, 69, 58, 0.15);
+    --tint-red-border: rgba(255, 69, 58, 0.35);
+    --tint-red-text: #FF453A;
+
+    --tint-purple-bg: rgba(191, 90, 242, 0.15);
+    --tint-purple-border: rgba(191, 90, 242, 0.35);
+    --tint-purple-text: #BF5AF2;
+
+    --tint-teal-bg: rgba(64, 200, 224, 0.15);
+    --tint-teal-border: rgba(64, 200, 224, 0.35);
+    --tint-teal-text: #40C8E0;
+  }
+}
+
+
+================================================================================
+5. STANDARD UI PATTERNS IMPLEMENTATION GUIDE
+================================================================================
+
+A. TYPOGRAPHY & FONT STACK
+   Always use the native San Francisco system font stack:
+   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+                "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+   Monospace (code, tokens, numbers):
+   font-family: -apple-system-ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+B. SWITCHES / TOGGLES
+   An authentic iOS/macOS toggle switch uses Apple Green (#34C759 / #30D158) when ON:
+   
+   .toggle {
+     position: relative;
+     width: 38px;
+     height: 22px;
+   }
+   .toggle input { opacity: 0; width: 0; height: 0; }
+   .toggle-slider {
+     position: absolute;
+     inset: 0;
+     background: var(--apple-gray-4);
+     border-radius: 11px;
+     transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+   }
+   .toggle-slider:before {
+     position: absolute;
+     content: "";
+     height: 18px;
+     width: 18px;
+     left: 2px;
+     bottom: 2px;
+     background: #ffffff;
+     border-radius: 50%;
+     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+   }
+   .toggle input:checked + .toggle-slider {
+     background: var(--apple-green);
+   }
+   .toggle input:checked + .toggle-slider:before {
+     transform: translateX(16px);
+   }
+
+C. BUTTONS
+   - Primary:
+     background: var(--accent);
+     color: #ffffff;
+     border-radius: 6px (or 20px for pill buttons);
+   - Destructive / Danger:
+     background: var(--danger);
+     color: #ffffff;
+   - Secondary / Subtle:
+     background: var(--fill-quaternary);
+     color: var(--text-primary);
+     border: 1px solid var(--separator-opaque);
+   - Ghost:
+     background: transparent;
+     color: var(--text-secondary);
+
+D. STATUS BADGES / PILLS
+   Never use hardcoded saturated background colors. Use the HIG formula:
+   12-15% opacity background tint + 30-35% opacity border + full color text.
+   
+   .badge.badge-success {
+     background: var(--tint-green-bg);
+     border: 1px solid var(--tint-green-border);
+     color: var(--tint-green-text);
+   }
+   .badge.badge-warning {
+     background: var(--tint-orange-bg);
+     border: 1px solid var(--tint-orange-border);
+     color: var(--tint-orange-text);
+   }
+   .badge.badge-danger {
+     background: var(--tint-red-bg);
+     border: 1px solid var(--tint-red-border);
+     color: var(--tint-red-text);
+   }
+   .badge.badge-info {
+     background: var(--tint-blue-bg);
+     border: 1px solid var(--tint-blue-border);
+     color: var(--tint-blue-text);
+   }
+
+E. FORM INPUTS & SELECTS
+   .form-input {
+     background: var(--bg-card);
+     color: var(--text-primary);
+     border: 1px solid var(--separator-opaque);
+     border-radius: 6px;
+   }
+   .form-input:focus {
+     outline: none;
+     border-color: var(--accent);
+     box-shadow: 0 0 0 2px var(--tint-blue-border);
+   }
+   .form-input::placeholder {
+     color: var(--text-tertiary);
+   }
+
+
+================================================================================
+6. CRITICAL LESSONS LEARNED & PITFALLS TO AVOID
+================================================================================
+
+1. NEVER HARDCODE INLINE COLORS IN JAVASCRIPT:
+   Avoid `element.style.color = '#1a73e8'` or `style.background = '#e6f4ea'`.
+   Always use CSS variable tokens: `element.style.color = 'var(--accent)'`, or
+   toggle CSS classes like `element.className = 'badge badge-success'`.
+
+2. NEVER HARDCODE INLINE CONTAINER BACKGROUNDS:
+   Putting `style="background: #f8f9fa;"` in HTML causes blinding white boxes
+   when users switch to Dark Mode. Always use semantic container variables like
+   `var(--bg-card)` or `var(--fill-quaternary)`.
+
+3. AVOID INLINE FALLBACK COLLISION:
+   Using `color: var(--text-primary, #1e293b);` where `--text-primary` is undefined
+   causes dark gray `#1e293b` text to render on `#000000` dark mode backgrounds,
+   making text completely invisible. Always declare `--text-primary` on `:root`.
+
+4. ELIMINATE REDUNDANT DARK MODE OVERRIDE BLOCKS:
+   By structuring your CSS around `:root` tokens and switching token values inside
+   `@media (prefers-color-scheme: dark) { :root { ... } }`, component styles
+   automatically adapt without duplicating hundreds of manual CSS overrides.
+================================================================================
