@@ -21,8 +21,7 @@
     "storage",
     "unlimitedStorage",
     "contextMenus",
-    "alarms",
-    "nativeMessaging"
+    "alarms"
   ],
   "host_permissions": [
     "https://api.anthropic.com/*",
@@ -31,9 +30,6 @@
     "https://aiplatform.googleapis.com/*",
     "https://www.instapaper.com/*",
     "https://api.todoist.com/*",
-    "https://huggingface.co/*",
-    "https://*.huggingface.co/*",
-    "https://*.hf.co/*",
     "https://*/*",
     "http://*/*"
   ],
@@ -49,8 +45,6 @@
   },
   "background": {
     "scripts": [
-      "model-manager.js",
-      "embedding-engine.js",
       "background.js"
     ]
   },

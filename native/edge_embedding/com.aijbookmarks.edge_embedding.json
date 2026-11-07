@@ -1,9 +1,0 @@
-{
-  "name": "com.aijbookmarks.edge_embedding",
-  "description": "AIJBookmarks Native Embedding Host with flutter_edge_ai & llamadart",
-  "path": "/home/admin/Code/Plugins/AIJBookmarks/native/edge_embedding/bin/host",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://*/"
-  ]
-}

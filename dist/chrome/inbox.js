@@ -101,140 +101,53 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   const aiConfig = await chrome.runtime.sendMessage({ action: 'checkAIConfig' }).catch(() => null);
-  const sortModelSelect = document.getElementById('sortModelSelect');
-  const sortBadge = document.getElementById('localEmbeddingSortBadge');
-  const sortCheckbox = document.getElementById('useLocalEmbeddingsSort');
+  const sortModelDisplay = document.getElementById('sortModelDisplay');
+  const sortModelBadge = document.getElementById('sortModelBadge');
 
-  function initSortModelSelector(config) {
-    if (!sortModelSelect) return;
-    sortModelSelect.innerHTML = '';
-
-    const models = config?.availableModels || [];
-    let selectedValue = 'auto';
-
-    // 1. If any model is loaded, preselect it!
-    const loadedModel = models.find(m => m.isLoaded);
-    if (loadedModel) {
-      selectedValue = loadedModel.id;
-    } else if (config?.loadedModelId) {
-      selectedValue = config.loadedModelId;
-    } else if (config?.hasCloudAI) {
-      selectedValue = 'cloud';
-    } else {
-      selectedValue = 'embeddinggemma-2';
-    }
-
-    // Populate dropdown options with available models
-    for (const m of models) {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      const statusText = m.isLoaded ? ' • Loaded & Active' : (m.status === 'downloaded' ? ' • Downloaded' : '');
-      opt.textContent = `${m.name}${statusText}`;
-      if (m.id === selectedValue) {
-        opt.selected = true;
-      }
-      sortModelSelect.appendChild(opt);
-    }
-
-    // If Cloud AI is configured, also list it
+  function initAIProviderStatus(config) {
+    if (!sortModelDisplay) return;
     if (config?.hasCloudAI) {
-      const optCloud = document.createElement('option');
-      optCloud.value = 'cloud';
-      const providerName = config?.cloudProvider ? config.cloudProvider.toUpperCase() : 'Cloud API';
-      optCloud.textContent = `☁️ ${providerName} (Cloud AI)`;
-      if (selectedValue === 'cloud') {
-        optCloud.selected = true;
+      const providerName = config.cloudProvider ? config.cloudProvider.toUpperCase() : 'Cloud AI';
+      const modelName = config.cloudModel ? ` (${config.cloudModel})` : '';
+      sortModelDisplay.textContent = `☁️ ${providerName}${modelName}`;
+      if (sortModelBadge) {
+        sortModelBadge.textContent = 'Active';
+        sortModelBadge.style.background = '#e6f4ea';
+        sortModelBadge.style.color = '#137333';
+        sortModelBadge.style.display = 'inline-block';
       }
-      sortModelSelect.appendChild(optCloud);
-    }
-
-    function refreshSortModelBadge() {
-      const currentVal = sortModelSelect.value;
-      if (currentVal === 'cloud') {
-        if (sortBadge) {
-          sortBadge.textContent = '☁️ Cloud API Active';
-          sortBadge.style.background = '#e8f0fe';
-          sortBadge.style.color = '#1a73e8';
-          sortBadge.style.display = 'inline-block';
-        }
-        if (sortCheckbox) sortCheckbox.checked = false;
-        return;
-      }
-
-      if (sortCheckbox) sortCheckbox.checked = true;
-      const chosenModel = models.find(m => m.id === currentVal);
-      if (chosenModel?.isLoaded) {
-        if (sortBadge) {
-          sortBadge.textContent = `🧠 ${chosenModel.name.split(' ')[0]} Loaded (Offline)`;
-          sortBadge.style.background = '#e6f4ea';
-          sortBadge.style.color = '#137333';
-          sortBadge.style.display = 'inline-block';
-        }
-      } else if (chosenModel?.status === 'downloaded') {
-        if (sortBadge) {
-          sortBadge.textContent = 'Downloaded (Loads on sort)';
-          sortBadge.style.background = '#fef7e0';
-          sortBadge.style.color = '#b06000';
-          sortBadge.style.display = 'inline-block';
-        }
-      } else {
-        if (sortBadge) {
-          sortBadge.textContent = 'Built-in Fallback';
-          sortBadge.style.background = '#f1f3f4';
-          sortBadge.style.color = '#5f6368';
-          sortBadge.style.display = 'inline-block';
-        }
+    } else {
+      sortModelDisplay.textContent = 'Not configured';
+      if (sortModelBadge) {
+        sortModelBadge.textContent = 'Setup required';
+        sortModelBadge.style.background = '#fef7e0';
+        sortModelBadge.style.color = '#b06000';
+        sortModelBadge.style.display = 'inline-block';
       }
     }
-
-    sortModelSelect.addEventListener('change', () => {
-      refreshSortModelBadge();
-      const currentVal = sortModelSelect.value;
-      if (currentVal !== 'cloud' && currentVal !== 'auto') {
-        chrome.runtime.sendMessage({ action: 'loadModel', modelId: currentVal }).catch(() => {});
-      }
-    });
-
-    refreshSortModelBadge();
   }
 
-  initSortModelSelector(aiConfig);
+  initAIProviderStatus(aiConfig);
 
-  const activeModelName = aiConfig?.loadedModelName || 'EmbeddingGemma-2';
-  if (aiConfig && !aiConfig.hasAI && !aiConfig.hasLocalAI) {
+  if (aiConfig && !aiConfig.hasCloudAI) {
     const alertBox = document.getElementById('alertBox');
     if (alertBox && bookmarks.length > 0) {
       alertBox.className = 'alert alert-info';
       alertBox.textContent = '';
-      alertBox.appendChild(document.createTextNode('ℹ️ Using '));
-      const strong = document.createElement('strong');
-      strong.textContent = `built-in ${activeModelName} engine`;
-      alertBox.appendChild(strong);
-      alertBox.appendChild(document.createTextNode(' for bookmark sorting. For full model weights, '));
+      alertBox.appendChild(document.createTextNode('⚠️ No AI provider configured. Please '));
       const a = document.createElement('a');
       a.href = '#';
       a.id = 'openSettingsAlertLink';
       a.style.color = '#1a73e8';
       a.style.fontWeight = '600';
       a.style.textDecoration = 'underline';
-      a.textContent = 'download in Settings';
+      a.textContent = 'configure an API key in Settings';
       a.addEventListener('click', (e) => {
         e.preventDefault();
         chrome.runtime.openOptionsPage();
       });
       alertBox.appendChild(a);
-      alertBox.appendChild(document.createTextNode('.'));
-    }
-  } else if (aiConfig?.hasLocalAI && !aiConfig?.hasCloudAI) {
-    const alertBox = document.getElementById('alertBox');
-    if (alertBox && bookmarks.length > 0 && alertBox.classList.contains('alert-loading')) {
-      alertBox.className = 'alert alert-info';
-      alertBox.textContent = '';
-      alertBox.appendChild(document.createTextNode('🧠 '));
-      const strong = document.createElement('strong');
-      strong.textContent = `Local ${activeModelName} Model Active.`;
-      alertBox.appendChild(strong);
-      alertBox.appendChild(document.createTextNode(' Bookmarks will be organized on-device without cloud API keys.'));
+      alertBox.appendChild(document.createTextNode(' to enable intelligent bookmark sorting.'));
     }
   }
 });
@@ -909,10 +822,6 @@ async function analyzeSelected() {
     if (timeMetric) timeMetric.textContent = `${elapsedSec}s elapsed`;
   }, 100);
 
-  const sortModelSelect = document.getElementById('sortModelSelect');
-  const selectedModelId = sortModelSelect?.value || 'auto';
-  const isCloudSelected = selectedModelId === 'cloud';
-  const useLocalSort = !isCloudSelected;
   const allowCreateFolders = Boolean(document.getElementById('allowCreateFolders')?.checked);
   const newFolderLocation = document.getElementById('inboxNewFolderLocation')?.value || 'root-bar';
   const allowRecursive = Boolean(document.getElementById('inboxAllowRecursiveFolders')?.checked);
@@ -928,16 +837,10 @@ async function analyzeSelected() {
       action: 'getAISuggestionsBatch',
       bookmarks: selectedBookmarks.map(({ id, title, url }) => ({ id, title, url })),
       allowCreateFolders,
-      modelId: selectedModelId,
-      useLocalJevModel: useLocalSort,
-      useLocalEmbeddings: useLocalSort,
       options: {
         allowCreateFolders,
         newFolderLocation,
-        allowRecursive,
-        modelId: selectedModelId,
-        useLocalJevModel: useLocalSort,
-        useLocalEmbeddings: useLocalSort
+        allowRecursive
       }
     });
 

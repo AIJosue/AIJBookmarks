@@ -42,7 +42,6 @@
 | **Inbox & Mass Auto-Sorting** | ✅ | ✅ | Sorts unsorted bookmarks sitting in Toolbar, Unfiled, or Menu roots |
 | **Folder Organization Planner** | ✅ | ✅ | Merges duplicates and reorganizes folders with safety checks |
 | **Health Check Auditor** | ✅ | ✅ | Parallel 404, redirect, and dead-link detection with auto-fix |
-| **Local EmbeddingGemma-2 Embedding Model** | ✅ | ✅ | On-device EmbeddingGemma-2 (UD-Q4_K_XL) model powered by node-llama-cpp |
 | **Third-Party Integrations** | ✅ | ✅ | Instapaper, Todoist, and Things 3 URL schemes |
 | **Encrypted Sync Storage** | ✅ | ✅ | Cross-device API key and setting persistence via `browser.storage.sync` |
 

@@ -7,12 +7,11 @@ AI-powered bookmark organizer Chrome extension
 
 ## Stack
 - Tags: javascript
-- Key libraries: eslint, node-llama-cpp, sharp
+- Key libraries: eslint, sharp
 - Detected from: package.json
 
 ## Structure
 - `icons/`
-- `native/`
 - `scripts/` — scripts and utilities
 - `tests/` — test suite
 

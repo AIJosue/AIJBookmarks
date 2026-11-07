@@ -641,15 +641,12 @@
             </label>
           </div>
         </div>
-        <div id="localEmbeddingsSortRow" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <label for="sortModelSelect" style="font-size: 13px; font-weight: 500; color: var(--text-primary, #1e293b); display: inline-flex; align-items: center; gap: 6px;">
-            <span>Sorting model:</span>
-          </label>
-          <select id="sortModelSelect" class="form-input-select" style="font-size: 12px; padding: 3px 8px; height: 30px; border-radius: 6px; border: 1px solid var(--border-color, #cbd5e1); background: var(--bg-card, #ffffff); font-weight: 500; min-width: 220px;">
-            <option value="auto">Detecting loaded model…</option>
-          </select>
-          <span id="localEmbeddingSortBadge" class="badge" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; display: none;"></span>
-          <input type="checkbox" id="useLocalEmbeddingsSort" checked style="display: none;">
+        <div id="sortModelRow" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 13px; font-weight: 500; color: var(--text-primary, #1e293b); display: inline-flex; align-items: center; gap: 6px;">
+            <span>AI Provider:</span>
+          </span>
+          <span id="sortModelDisplay" style="font-size: 12px; font-weight: 500; color: var(--text-primary, #1e293b);">Detecting…</span>
+          <span id="sortModelBadge" class="badge" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; display: none;"></span>
         </div>
       </div>
     </div>

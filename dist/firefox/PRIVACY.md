@@ -76,7 +76,6 @@ When you choose “Add to Things,” the extension opens a **things://** URL in 
 
 - **Bookmarks** — To create, read, and organize bookmarks in your browser.  
 - **Storage** — To save your settings in Chrome sync storage and temporary diagnostics in session RAM.  
-- **Offscreen** — To run WebGPU acceleration pipelines for parallel computing tasks locally on your device.
 - **Context menu** — To add “Analyze and Bookmark with AI” when you right‑click on a page.  
 - **Host access (all websites)** — To fetch the HTML of the page you are bookmarking (only when needed for AI analysis) or perform health check liveness pings.  
 - **Anthropic / OpenAI / Gemini / OpenRouter / Instapaper / Todoist / Readwise / Raindrop** — To call their APIs when you use those features.

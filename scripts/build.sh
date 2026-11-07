@@ -6,14 +6,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 build_chrome() {
   echo "==> Building Chrome extension..."
+  rm -rf "$ROOT_DIR/dist/chrome"
   mkdir -p "$ROOT_DIR/dist/chrome"
-  rm -rf "$ROOT_DIR/dist/chrome/*"
   
   cp "$ROOT_DIR/manifest.json" "$ROOT_DIR/dist/chrome/manifest.json"
   cp "$ROOT_DIR/background.js" "$ROOT_DIR/dist/chrome/"
-  cp "$ROOT_DIR/model-manager.js" "$ROOT_DIR/dist/chrome/"
-  cp "$ROOT_DIR/embedding-engine.js" "$ROOT_DIR/dist/chrome/"
-  cp "$ROOT_DIR/offscreen.html" "$ROOT_DIR/offscreen.js" "$ROOT_DIR/dist/chrome/"
   cp "$ROOT_DIR/popup.html" "$ROOT_DIR/popup.js" "$ROOT_DIR/dist/chrome/"
   cp "$ROOT_DIR/options.html" "$ROOT_DIR/options.js" "$ROOT_DIR/dist/chrome/"
   cp "$ROOT_DIR/health-check.html" "$ROOT_DIR/health-check.js" "$ROOT_DIR/dist/chrome/"
@@ -29,14 +26,11 @@ build_chrome() {
 
 build_firefox() {
   echo "==> Building Firefox extension..."
+  rm -rf "$ROOT_DIR/dist/firefox"
   mkdir -p "$ROOT_DIR/dist/firefox"
-  rm -rf "$ROOT_DIR/dist/firefox/*"
   
   cp "$ROOT_DIR/manifest.firefox.json" "$ROOT_DIR/dist/firefox/manifest.json"
   cp "$ROOT_DIR/background.js" "$ROOT_DIR/dist/firefox/"
-  cp "$ROOT_DIR/model-manager.js" "$ROOT_DIR/dist/firefox/"
-  cp "$ROOT_DIR/embedding-engine.js" "$ROOT_DIR/dist/firefox/"
-  cp "$ROOT_DIR/offscreen.html" "$ROOT_DIR/offscreen.js" "$ROOT_DIR/dist/firefox/"
   cp "$ROOT_DIR/popup.html" "$ROOT_DIR/popup.js" "$ROOT_DIR/dist/firefox/"
   cp "$ROOT_DIR/options.html" "$ROOT_DIR/options.js" "$ROOT_DIR/dist/firefox/"
   cp "$ROOT_DIR/health-check.html" "$ROOT_DIR/health-check.js" "$ROOT_DIR/dist/firefox/"

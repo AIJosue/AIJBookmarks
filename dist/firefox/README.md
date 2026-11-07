@@ -1,14 +1,14 @@
 <div align="center">
   <img src="icons/icon128.png" alt="AIJbookmarks Logo" width="100" height="100">
   <h1>AIJbookmarks</h1>
-  <p><strong>Intelligent AI-powered bookmark organizer, on-device EmbeddingGemma-2 embedding model sorting, and link health dashboard for Google Chrome Desktop & Mozilla Firefox Desktop.</strong></p>
+  <p><strong>Intelligent AI-powered bookmark organizer and link health dashboard for Google Chrome Desktop & Mozilla Firefox Desktop.</strong></p>
 </div>
 
 ---
 
 ## 🌟 Why AIJbookmarks?
 
-Saving bookmarks is easy—finding them and keeping them organized is hard. **AIJbookmarks** automatically sorts your links into intuitive folders using your favorite AI model or the on-device EmbeddingGemma-2 embedding model, and keeps your library clean and healthy by detecting dead links, redirects, and duplicates.
+Saving bookmarks is easy—finding them and keeping them organized is hard. **AIJbookmarks** automatically sorts your links into intuitive folders using your favorite AI model, and keeps your library clean and healthy by detecting dead links, redirects, and duplicates.
 
 ---
 
@@ -32,7 +32,6 @@ Saving bookmarks is easy—finding them and keeping them organized is hard. **AI
 1. Click the **AIJbookmarks** icon in your Chrome toolbar (pin it for convenience!).
 2. Click **Extension Settings** at the bottom of the popup.
 3. Choose your preferred AI provider:
-   - **Local EmbeddingGemma-2 Embedding Model** (EmbeddingGemma-2 (UD-Q4_K_XL) on-device via node-llama-cpp — no API keys required!)
    - **Anthropic Claude** (e.g. Claude 3.5 Haiku / Sonnet)
    - **OpenAI & Compatible** (ChatGPT, Ollama, LM Studio, Groq, DeepSeek, Together, etc.)
    - **Google Gemini** (e.g. Gemini 2.5 Flash, Gemini 3 Flash)
@@ -52,12 +51,6 @@ Saving bookmarks is easy—finding them and keeping them organized is hard. **AI
 - Automatically matches pages against your existing bookmark folders.
 - **Custom Folder Rules**: Set domain rules to always file specific sites (e.g., `github.com` → `Development/Repositories`).
 - **Controlled Folder Creation**: Decide whether the AI can create new folders, specify a dedicated parent folder for new categories, and toggle recursive folder depth to prevent runaway subfolder trees.
-
-### 🧠 Local EmbeddingGemma-2 Embedding Model (node-llama-cpp)
-- **Zero-Latency Offline Sorting**: Runs Google's EmbeddingGemma-2 (UD-Q4_K_XL GGUF) directly on-device using node-llama-cpp and high-performance vector embeddings.
-- **1024-Dimensional Semantic Routing**: Evaluates folder candidates and produces cosine similarity distributions to sort bookmarks into matching folders.
-- **Custom Model URL Support**: Easily point to any custom GGUF embedding model URL besides EmbeddingGemma-2.
-- **Complete Privacy**: Works 100% locally on-device without API keys, cloud subscriptions, or external servers.
 
 ### 🩺 Bookmark Health Check & Maintenance
 A unified link audit dashboard (open via Extension Popup → **Health Check**):

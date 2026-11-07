@@ -1,7 +1,5 @@
 import { describe, it, mock, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
-import '../model-manager.js';
-import '../embedding-engine.js';
 
 // We need to mock the global fetch and the chrome API since we're running in Node
 let fetchHtmlContent;
@@ -9,7 +7,6 @@ let isSystemFolder;
 let getUserFolders;
 let normalizeCategoryToExistingFolders;
 let stripRootFolderPrefix;
-let classifyBookmarksWithLocalEmbeddings;
 let handleGetAISuggestionsBatch;
 let invalidateBookmarkTreeCache;
 let getSortingScopeFolders;
@@ -52,7 +49,6 @@ beforeEach(async () => {
   // Use eval to get the function reference
   const moduleScope = eval(`
         (() => {
-            const { embeddingEngine, modelManager } = globalThis;
             ${bgScript}
             return {
               fetchHtmlContent,
@@ -60,7 +56,6 @@ beforeEach(async () => {
               getUserFolders,
               normalizeCategoryToExistingFolders,
               stripRootFolderPrefix,
-              classifyBookmarksWithLocalEmbeddings,
               handleGetAISuggestionsBatch,
               invalidateBookmarkTreeCache,
               getSortingScopeFolders,
@@ -74,7 +69,6 @@ beforeEach(async () => {
   getUserFolders = moduleScope.getUserFolders;
   normalizeCategoryToExistingFolders = moduleScope.normalizeCategoryToExistingFolders;
   stripRootFolderPrefix = moduleScope.stripRootFolderPrefix;
-  classifyBookmarksWithLocalEmbeddings = moduleScope.classifyBookmarksWithLocalEmbeddings;
   handleGetAISuggestionsBatch = moduleScope.handleGetAISuggestionsBatch;
   invalidateBookmarkTreeCache = moduleScope.invalidateBookmarkTreeCache;
   getSortingScopeFolders = moduleScope.getSortingScopeFolders;
@@ -251,51 +245,33 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
     assert.strictEqual(stripRootFolderPrefix(''), '');
   });
 
-  it('should automatically classify bookmarks using on-device embedding without cloud AI or manual downloads', async () => {
-    const testBookmarks = [
-      { id: '1', title: 'React Hooks and Component Lifecycle Documentation', url: 'https://react.dev/reference/react' },
-      { id: '2', title: 'Grandma Homemade Chocolate Chip Cookie Recipe', url: 'https://recipes.com/best-cookies' }
+  it('should return error when no AI provider credentials are configured in handleGetAISuggestionsBatch', async () => {
+    const batch = [
+      { id: 'bm1', title: 'Vue.js Component Framework', url: 'https://vuejs.org' }
     ];
-    const userFolders = ['Software Development', 'Cooking & Kitchen', 'Finance'];
 
-    const results = await classifyBookmarksWithLocalEmbeddings(testBookmarks, userFolders);
-    assert.strictEqual(results.length, 2);
-    assert.strictEqual(results[0].success, true);
-    assert.strictEqual(results[0].matchedCategory, 'Software Development');
-    assert.strictEqual(results[1].success, true);
-    assert.strictEqual(results[1].matchedCategory, 'Cooking & Kitchen');
+    const response = await handleGetAISuggestionsBatch(batch);
+    assert.strictEqual(response.success, false);
+    assert.ok(response.error.includes('No AI provider configured'));
   });
 
-  it('should automatically process batch sorting in handleGetAISuggestionsBatch with zero setup', async () => {
-    globalThis.chrome.bookmarks.getTree = async () => [
-      {
-        id: '0',
-        title: '',
-        children: [
-          {
-            id: '1',
-            parentId: '0',
-            title: 'Bookmarks Bar',
-            children: [
-              { id: 'f1', parentId: '1', title: 'Software Development', children: [] },
-              { id: 'f2', parentId: '1', title: 'Cooking & Kitchen', children: [] }
-            ]
-          }
-        ]
-      }
-    ];
-    invalidateBookmarkTreeCache();
+  it('should apply domain rules without calling AI in handleGetAISuggestionsBatch', async () => {
+    globalThis.chrome.storage.sync.get = async () => ({
+      sortAllowCreateFolders: true,
+      domainRules: [
+        { domain: 'github.com', folder: 'Development' }
+      ]
+    });
 
     const batch = [
-      { id: 'bm1', title: 'Vue.js Component Framework', url: 'https://vuejs.org' },
-      { id: 'bm2', title: 'Delicious Homemade Apple Pie Recipe', url: 'https://recipes.com/apple-pie' }
+      { id: 'bm1', title: 'GitHub', url: 'https://github.com/torvalds/linux' }
     ];
 
     const response = await handleGetAISuggestionsBatch(batch);
     assert.strictEqual(response.success, true);
-    assert.strictEqual(response.results.length, 2);
-    assert.strictEqual(response.results[0].matchedCategory, 'Software Development');
-    assert.strictEqual(response.results[1].matchedCategory, 'Cooking & Kitchen');
+    assert.strictEqual(response.results.length, 1);
+    assert.strictEqual(response.results[0].matchedCategory, 'Development');
+    assert.strictEqual(response.results[0].fromRule, true);
   });
 
   it('should include root containers and user subfolders in getSortingScopeFolders without empty lists', async () => {
@@ -417,7 +393,6 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
     assert.doesNotThrow(() => {
       const scope = eval(`
         (() => {
-          const { embeddingEngine, modelManager } = globalThis;
           ${bgScript}
           return { isSystemFolder, getUserFolders };
         })()
@@ -428,7 +403,7 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
     });
   });
 
-  it('should use whichever model is loaded and include modelUsed in batch sorting results', async () => {
+  it('should process batch with configured Cloud AI provider', async () => {
     globalThis.chrome.bookmarks.getTree = async () => [
       {
         id: '0',
@@ -448,13 +423,40 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
     ];
     invalidateBookmarkTreeCache();
 
-    const batch = [
-      { id: 'b1', title: 'Python Handbook', url: 'https://python.org' }
-    ];
+    const originalGetSync = globalThis.chrome.storage.sync.get;
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.chrome.storage.sync.get = async () => ({
+        aiProvider: 'openai',
+        openaiApiKey: 'sk-test-key-12345',
+        openaiModel: 'gpt-4o-mini'
+      });
 
-    const response = await handleGetAISuggestionsBatch(batch);
-    assert.strictEqual(response.success, true);
-    assert.strictEqual(response.fromLocalModel, true);
-    assert.ok(response.modelUsed);
+      globalThis.fetch = async () => ({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify([{ id: 'b1', matchedCategory: 'Tech' }])
+              }
+            }
+          ]
+        })
+      });
+
+      const batch = [
+        { id: 'b1', title: 'Python Handbook', url: 'https://python.org' }
+      ];
+
+      const response = await handleGetAISuggestionsBatch(batch);
+      assert.strictEqual(response.success, true);
+      assert.strictEqual(response.results.length, 1);
+      assert.strictEqual(response.results[0].id, 'b1');
+      assert.strictEqual(response.results[0].matchedCategory, 'Tech');
+    } finally {
+      globalThis.chrome.storage.sync.get = originalGetSync;
+      globalThis.fetch = originalFetch;
+    }
   });
 });

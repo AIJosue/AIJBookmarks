@@ -1,7 +1,3 @@
-if (typeof importScripts === 'function') {
-  importScripts('model-manager.js', 'embedding-engine.js');
-}
-
 const _USER_AGENT = 'Mozilla/5.0 (compatible; AIJbookmarks/1.0)';
 
 // Browser bookmark root IDs differ between browsers (e.g. Chrome uses '0', '1', '2', '3'; Firefox uses 'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______')
@@ -162,15 +158,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     'analyzeBookmark', 'runHealthCheck', 'getHealthCheckData', 'applyHealthFix',
     'applyBulkFix', 'dismissHealthIssue', 'setupHealthCheckAlarm',
     'checkAIConfig', 'undoBookmark',
-    'getUnsortedBookmarks', 'getSortingScopeFolders', 'getExistingFolders', 'getAISuggestion', 'getAISuggestionsBatch', 'cancelBatchAnalysis', 'getFolderOrganizationData', 'generateFolderOrganizationPlan', 'applyFolderOrganizationPlan', 'getCleanupPreview', 'applyCleanup', 'moveBookmarks', 'deleteBookmarks',
-    'getGpuStatus',
-    'getMiniCPMModelStatus', 'startMiniCPMModelDownload', 'cancelMiniCPMModelDownload', 'loadMiniCPMModel', 'unloadMiniCPMModel', 'deleteMiniCPMModel', 'setUseLocalMiniCPMModel', 'testMiniCPMModel', 'classifyBookmarksWithMiniCPMModel',
-    'getLLMModelStatus', 'startLLMModelDownload', 'cancelLLMModelDownload', 'loadLLMModel', 'unloadLLMModel', 'deleteLLMModel', 'setUseLocalLLMModel', 'testLLMModel', 'classifyBookmarksWithLLMModel',
-    'getCustomLLMConfig', 'saveCustomLLMConfig',
-    'getLFMModelStatus', 'startLFMModelDownload', 'cancelLFMModelDownload', 'loadLFMModel', 'unloadLFMModel', 'deleteLFMModel', 'setUseLocalLFMModel', 'testLFMModel', 'classifyBookmarksWithLFMModel',
-    'getJevModelStatus', 'startJevModelDownload', 'cancelJevModelDownload', 'loadJevModel', 'unloadJevModel', 'deleteJevModel', 'setUseLocalJevModel', 'testJevModel', 'classifyBookmarksWithJevModel',
-    'getEmbeddingModelStatus', 'startEmbeddingModelDownload', 'cancelEmbeddingModelDownload', 'loadEmbeddingModel', 'unloadEmbeddingModel', 'deleteEmbeddingModel', 'setUseLocalEmbeddings', 'testEmbeddingModel', 'classifyBookmarksWithLocalEmbeddings', 'classifyBookmarksWithQwenModel',
-    'getCustomModelConfig', 'saveCustomModelConfig'
+    'getUnsortedBookmarks', 'getSortingScopeFolders', 'getExistingFolders', 'getAISuggestion', 'getAISuggestionsBatch', 'cancelBatchAnalysis', 'getFolderOrganizationData', 'generateFolderOrganizationPlan', 'applyFolderOrganizationPlan', 'getCleanupPreview', 'applyCleanup', 'moveBookmarks', 'deleteBookmarks'
   ];
 
   if (!actionsWithResponse.includes(request.action)) {
@@ -216,67 +204,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case 'checkAIConfig': {
-        const { hasAI, provider } = await getAIConfig();
-        const targetModelManager = (typeof modelManager !== 'undefined' ? modelManager : null) ||
-          (typeof globalThis !== 'undefined' ? globalThis.modelManager : null);
-        if (targetModelManager && typeof targetModelManager.loadStoredCustomModelConfig === 'function') {
-          await targetModelManager.loadStoredCustomModelConfig();
-        }
-        const stored = await chrome.storage.local.get(['embeddingModelLoaded', 'embeddingModelId', 'embeddingModelStatus']).catch(() => ({}));
-
-        let loadedModelId = null;
-        if (targetModelManager?.isLoaded && targetModelManager.loadedModelId) {
-          loadedModelId = targetModelManager.loadedModelId;
-        } else if (stored.embeddingModelLoaded && stored.embeddingModelId) {
-          loadedModelId = stored.embeddingModelId;
-        }
-
-        let loadedModelConfig = null;
-        let isLocalLoaded = false;
-        if (loadedModelId && targetModelManager) {
-          const status = await targetModelManager.getStatus(loadedModelId);
-          if (status.status === 'loaded' || targetModelManager.isLoaded || stored.embeddingModelLoaded) {
-            isLocalLoaded = true;
-            loadedModelConfig = targetModelManager.getModelConfig(loadedModelId);
-          }
-        }
-
-        const defaultId = targetModelManager?.DEFAULT_LOCAL_MODEL_ID || 'minicpm5-1b';
-        const defaultStatus = targetModelManager ? await targetModelManager.getStatus(defaultId) : { status: 'downloaded' };
-        const isLocalDownloaded = defaultStatus.status === 'downloaded' || isLocalLoaded;
-
-        // Build list of models for the sort page
-        const availableModels = [];
-        if (targetModelManager) {
-          const modelOrder = ['embeddinggemma-2', 'custom-embedding-model', 'qwen3-embedding-0.6b'];
-          for (const mid of modelOrder) {
-            if ((mid === 'custom-llm-model' || mid === 'custom-embedding-model') && !targetModelManager.customModels?.has(mid)) {
-              continue;
-            }
-            const cfg = targetModelManager.getModelConfig(mid);
-            const st = await targetModelManager.getStatus(mid);
-            const loadedThis = (st.status === 'loaded') || (mid === loadedModelId && isLocalLoaded);
-            availableModels.push({
-              id: mid,
-              name: cfg.name,
-              type: cfg.isLLM ? 'LLM' : (cfg.isInstructModel ? 'Instruct' : 'Embedding'),
-              status: loadedThis ? 'loaded' : st.status,
-              isLoaded: loadedThis
-            });
-          }
-        }
-
+        const { hasAI, provider, settings } = await getAIConfig();
+        const model = settings[`${provider}Model`] || settings.geminiModel || '';
         sendResponse({
-          hasAI: hasAI || isLocalLoaded,
+          hasAI,
           hasCloudAI: hasAI,
           cloudProvider: provider,
-          hasLocalAI: isLocalLoaded,
-          isLocalLoaded,
-          isLocalDownloaded,
-          loadedModelId: isLocalLoaded ? loadedModelId : null,
-          loadedModelName: isLocalLoaded ? (loadedModelConfig?.name || 'Local Model') : null,
-          loadedModelType: isLocalLoaded ? (loadedModelConfig?.isLLM ? 'LLM' : 'Embedding') : null,
-          availableModels
+          cloudModel: model
         });
         break;
       }
@@ -362,169 +296,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse(res);
         break;
       }
-      case 'getGpuStatus': {
-        const res = await handleGetGpuStatus();
-        sendResponse(res);
-        break;
-      }
-      case 'getMiniCPMModelStatus':
-      case 'getLLMModelStatus':
-      case 'getLFMModelStatus':
-      case 'getJevModelStatus':
-      case 'getEmbeddingModelStatus': {
-        const defaultId = request.action === 'getEmbeddingModelStatus' ? 'embeddinggemma-2' : 'minicpm5-1b';
-        const status = await modelManager.getStatus(request.modelId || defaultId);
-        sendResponse(status);
-        break;
-      }
-      case 'loadMiniCPMModel':
-      case 'loadLLMModel':
-      case 'loadLFMModel':
-      case 'loadJevModel':
-      case 'loadEmbeddingModel': {
-        const defaultId = request.action === 'loadEmbeddingModel' ? 'embeddinggemma-2' : 'minicpm5-1b';
-        const res = await modelManager.loadModel(request.modelId || defaultId);
-        sendResponse(res);
-        break;
-      }
-      case 'unloadMiniCPMModel':
-      case 'unloadLLMModel':
-      case 'unloadLFMModel':
-      case 'unloadJevModel':
-      case 'unloadEmbeddingModel': {
-        const defaultId = request.action === 'unloadEmbeddingModel' ? 'embeddinggemma-2' : 'minicpm5-1b';
-        const res = await modelManager.unloadModel(request.modelId || defaultId);
-        sendResponse(res);
-        break;
-      }
-      case 'startMiniCPMModelDownload':
-      case 'startLLMModelDownload':
-      case 'startLFMModelDownload':
-      case 'startJevModelDownload':
-      case 'startEmbeddingModelDownload': {
-        const defaultId = request.action === 'startEmbeddingModelDownload' ? 'embeddinggemma-2' : 'minicpm5-1b';
-        const res = await modelManager.startDownload(request.modelId || defaultId, request.customModel);
-        sendResponse(res);
-        break;
-      }
-      case 'getCustomLLMConfig': {
-        const config = await modelManager.getCustomLLMConfig();
-        sendResponse({ success: true, config });
-        break;
-      }
-      case 'saveCustomLLMConfig': {
-        const config = await modelManager.registerCustomLLMModel(request.customModel);
-        sendResponse({ success: true, config });
-        break;
-      }
-      case 'getCustomModelConfig': {
-        const config = await modelManager.loadStoredCustomModelConfig();
-        sendResponse({ success: true, config });
-        break;
-      }
-      case 'saveCustomModelConfig': {
-        const config = await modelManager.registerCustomModel(request.customModel);
-        sendResponse({ success: true, config });
-        break;
-      }
-      case 'cancelMiniCPMModelDownload':
-      case 'cancelLLMModelDownload':
-      case 'cancelLFMModelDownload':
-      case 'cancelJevModelDownload':
-      case 'cancelEmbeddingModelDownload': {
-        const res = await modelManager.cancelDownload(request.modelId);
-        sendResponse(res);
-        break;
-      }
-      case 'deleteMiniCPMModel':
-      case 'deleteLLMModel':
-      case 'deleteLFMModel':
-      case 'deleteJevModel':
-      case 'deleteEmbeddingModel': {
-        const defaultId = request.action === 'deleteEmbeddingModel' ? 'embeddinggemma-2' : 'minicpm5-1b';
-        const res = await modelManager.deleteModel(request.modelId || defaultId);
-        if (typeof embeddingEngine !== 'undefined' && typeof embeddingEngine.clearAllEmbeddings === 'function') {
-          await embeddingEngine.clearAllEmbeddings();
-        }
-        sendResponse(res);
-        break;
-      }
-      case 'setUseLocalMiniCPMModel':
-      case 'setUseLocalLLMModel':
-      case 'setUseLocalLFMModel':
-      case 'setUseLocalJevModel':
-      case 'setUseLocalEmbeddings': {
-        await chrome.storage.local.set({
-          useLocalMiniCPMModel: !!request.enabled,
-          useLocalLLMModel: !!request.enabled,
-          useLocalLFMModel: !!request.enabled,
-          useLocalJevModel: !!request.enabled,
-          useLocalEmbeddings: !!request.enabled
-        });
-        sendResponse({ success: true, enabled: !!request.enabled });
-        break;
-      }
-      case 'classifyBookmarksWithQwenModel': {
-        const results = await classifyBookmarksWithQwenModel(request.bookmarks, request.existingFolders, request.options);
-        sendResponse({ success: true, results });
-        break;
-      }
-      case 'classifyBookmarksWithLLMModel': {
-        const results = await classifyBookmarksWithLLMModel(request.bookmarks, request.existingFolders, request.options);
-        sendResponse({ success: true, results });
-        break;
-      }
-      case 'classifyBookmarksWithLFMModel': {
-        const results = await classifyBookmarksWithLFMModel(request.bookmarks, request.existingFolders, request.options);
-        sendResponse({ success: true, results });
-        break;
-      }
-      case 'classifyBookmarksWithMiniCPMModel':
-      case 'classifyBookmarksWithJevModel':
-      case 'classifyBookmarksWithLocalEmbeddings': {
-        const results = await classifyBookmarksWithMiniCPMModel(request.bookmarks, request.existingFolders, request.options);
-        sendResponse({ success: true, results });
-        break;
-      }
-      case 'testEmbeddingGemmaModel':
-      case 'testMiniCPMModel':
-      case 'testLLMModel':
-      case 'testLFMModel':
-      case 'testJevModel':
-      case 'testEmbeddingModel': {
-        const sampleBookmark = {
-          id: 'test',
-          title: request.title || request.text || 'Artificial Intelligence and bookmarks organization',
-          url: request.url || 'https://example.com/ai'
-        };
-        const sampleFolders = ['Development', 'Food & Cooking', 'Finance & Investments', 'Design & Creative'];
-        const engine = (typeof globalThis !== 'undefined' && globalThis.embeddingEngine) ||
-          (typeof globalThis !== 'undefined' && globalThis.minicpmEngine) ||
-          (typeof globalThis !== 'undefined' && globalThis.lfmEngine) ||
-          (typeof globalThis !== 'undefined' && globalThis.qwenEngine) ||
-          (typeof globalThis !== 'undefined' && globalThis.jevEngine) ||
-          (typeof embeddingEngine !== 'undefined' ? embeddingEngine : null);
-        const decision = engine && typeof engine.classifyBookmark === 'function'
-          ? engine.classifyBookmark(sampleBookmark, sampleFolders)
-          : { matchedCategory: 'Development', confidence: 0.95, score: 0.95 };
-        const vector = engine && typeof engine.generateEmbedding === 'function'
-          ? engine.generateEmbedding(sampleBookmark.title)
-          : new Float32Array(1024);
-        sendResponse({
-          success: true,
-          model: engine?.modelId || 'minicpm5-1b',
-          modelName: engine?.modelName || 'MiniCPM5-1B (Q5_K_M)',
-          isInstructModel: engine?.isInstructModel ?? true,
-          isLLM: engine?.isLLM ?? true,
-          matchedCategory: decision.matchedCategory,
-          confidence: decision.confidence,
-          probabilities: decision.probabilities,
-          score: decision.score,
-          vectorDimensions: vector.length,
-          vectorSample: Array.from(vector.slice(0, 5))
-        });
-        break;
-      }
       }
     } catch (error) {
       sendResponse({ success: false, error: error.message });
@@ -568,11 +339,6 @@ function _decodeTransferableArrayBuffer(buffer) {
   } catch {
     return str;
   }
-}
-
-async function handleGetGpuStatus() {
-  const supported = typeof navigator !== 'undefined' && Boolean(navigator.gpu);
-  return { success: true, supported, reason: supported ? 'WebGPU Available' : 'WebGPU not available' };
 }
 
 /**
@@ -2111,140 +1877,17 @@ function extractJsonPayload(responseText, expectedType) {
   return null;
 }
 
-/**
- * Classifies bookmarks into destination folders using the on-device EmbeddingGemma-2 model (or other local embedding model).
- * Operates completely on-device without cloud API keys.
- */
-async function classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options = {}) {
-  const allowCreateFolders = Boolean(options.allowCreateFolders);
-  const allowRecursive = Boolean(options.allowRecursive);
-  const userFolders = getUserFolders(existingFolders);
-
-  if (!Array.isArray(bookmarks) || bookmarks.length === 0) {
-    return [];
-  }
-
-  const engine = (typeof globalThis !== 'undefined' && globalThis.embeddingEngine) ||
-    (typeof globalThis !== 'undefined' && globalThis.qwenEngine) ||
-    (typeof globalThis !== 'undefined' && globalThis.jevEngine) ||
-    (typeof embeddingEngine !== 'undefined' ? embeddingEngine : null);
-
-  const results = [];
-  const total = bookmarks.length;
-  const BATCH_NOTIFY_SIZE = 10;
-
-  for (let i = 0; i < bookmarks.length; i++) {
-    if (batchAnalysisCancelled) break;
-    const bm = bookmarks[i];
-
-    let decision;
-    if (engine && typeof engine.classifyBookmark === 'function') {
-      decision = engine.classifyBookmark(bm, userFolders, { allowCreateFolders, allowRecursive });
-    } else {
-      decision = {
-        matchedCategory: userFolders[0] || 'Bookmarks Bar',
-        score: 0.5,
-        confidence: 0.5
-      };
-    }
-
-    const matchedCategory = normalizeCategoryToExistingFolders(
-      decision.matchedCategory,
-      userFolders,
-      allowCreateFolders,
-      { allowRecursive }
-    );
-
-    const itemResult = {
-      id: bm.id,
-      success: true,
-      matchedCategory,
-      score: decision.score || 0.5,
-      confidence: decision.confidence || 0.5,
-      fromMiniCPMModel: true,
-      fromLLMModel: true,
-      fromLFMModel: true,
-      fromQwenModel: true,
-      fromJevModel: true,
-      fromLocalEmbedding: true
-    };
-    results.push(itemResult);
-
-    // Broadcast batch progress periodically or at the end
-    if ((i + 1) % BATCH_NOTIFY_SIZE === 0 || i === bookmarks.length - 1) {
-      broadcastBatchProgress({
-        type: 'batchSuccess',
-        batchIndex: Math.floor(i / BATCH_NOTIFY_SIZE) + 1,
-        totalBatches: Math.ceil(total / BATCH_NOTIFY_SIZE),
-        batchSize: BATCH_NOTIFY_SIZE,
-        itemResults: results.slice(i - (i % BATCH_NOTIFY_SIZE)),
-        stats: {
-          inputTokens: (i + 1) * 20,
-          outputTokens: (i + 1) * 5,
-          responseTimeMs: 8,
-          modelName: engine?.modelName || 'MiniCPM5-1B (Q5_K_M)'
-        }
-      });
-    }
-  }
-
-  return results;
-}
-
-// Aliases for backwards compatibility
-async function classifyBookmarksWithMiniCPMModel(bookmarks, existingFolders, options = {}) {
-  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
-}
-async function classifyBookmarksWithLLMModel(bookmarks, existingFolders, options = {}) {
-  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
-}
-async function classifyBookmarksWithLFMModel(bookmarks, existingFolders, options = {}) {
-  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
-}
-async function classifyBookmarksWithJevModel(bookmarks, existingFolders, options = {}) {
-  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
-}
-async function classifyBookmarksWithQwenModel(bookmarks, existingFolders, options = {}) {
-  return classifyBookmarksWithLocalEmbeddings(bookmarks, existingFolders, options);
-}
-
-async function handleGetAISuggestion({ url, title, modelId }) {
+async function handleGetAISuggestion({ url, title }) {
   const { settings, provider, hasAI } = await getAIConfig();
   const ruleFolder = matchesDomainRule(url, settings.domainRules || []);
   if (ruleFolder) {
     return { success: true, matchedCategory: ruleFolder };
   }
 
-  const targetModelManager = (typeof modelManager !== 'undefined' ? modelManager : null) ||
-    (typeof globalThis !== 'undefined' ? globalThis.modelManager : null);
-
-  if (modelId && modelId !== 'cloud' && modelId !== 'auto' && targetModelManager) {
-    if (targetModelManager.loadedModelId !== modelId) {
-      try {
-        await targetModelManager.loadModel(modelId);
-      } catch {}
-    }
-  }
-
-  const stored = await chrome.storage.local.get(['embeddingModelLoaded', 'embeddingModelId']).catch(() => ({}));
-  const isLocalLoaded = Boolean(targetModelManager?.isLoaded || stored.embeddingModelLoaded);
-  const isCloudRequested = modelId === 'cloud';
-  const preferLocal = isCloudRequested ? false : (isLocalLoaded || !hasAI);
-
-  if (preferLocal || !hasAI) {
-    const existingFolders = await getExistingBookmarkFolders();
-    const results = await classifyBookmarksWithJevModel([{ id: 'single', url, title }], existingFolders, {
-      allowCreateFolders: Boolean(settings.sortAllowCreateFolders),
-      allowRecursive: Boolean(settings.sortAllowRecursiveFolders)
-    });
-    const activeEngineName = (typeof embeddingEngine !== 'undefined' && embeddingEngine?.modelName) || 'Local Model';
+  if (!hasAI) {
     return {
-      success: true,
-      matchedCategory: results[0]?.matchedCategory || 'Other',
-      fromLocalModel: true,
-      fromJevModel: true,
-      fromLocalEmbedding: true,
-      modelUsed: activeEngineName
+      success: false,
+      error: 'No AI provider configured. Please configure an API key (Gemini, Claude, OpenAI, or OpenRouter) in Settings.'
     };
   }
 
@@ -2281,29 +1924,6 @@ function broadcastBatchProgress(progressData) {
 async function handleGetAISuggestionsBatch(inputBookmarks, options = {}) {
   batchAnalysisCancelled = false;
   const { settings, provider, hasAI } = await getAIConfig();
-
-  const selectedModelId = options?.modelId || options?.options?.modelId;
-  const targetModelManager = (typeof modelManager !== 'undefined' ? modelManager : null) ||
-    (typeof globalThis !== 'undefined' ? globalThis.modelManager : null);
-
-  if (selectedModelId && selectedModelId !== 'cloud' && selectedModelId !== 'auto' && targetModelManager) {
-    if (targetModelManager.loadedModelId !== selectedModelId) {
-      try {
-        await targetModelManager.loadModel(selectedModelId);
-      } catch (err) {
-        console.warn(`Could not load requested model ${selectedModelId}:`, err);
-      }
-    }
-  }
-
-  const stored = await chrome.storage.local.get(['embeddingModelLoaded', 'embeddingModelId']).catch(() => ({}));
-  const isLocalLoaded = Boolean(targetModelManager?.isLoaded || stored.embeddingModelLoaded);
-  const isCloudRequested = selectedModelId === 'cloud';
-
-  // Automatic on-device sorting using whichever model is loaded, unless cloud is explicitly chosen
-  const preferLocal = isCloudRequested
-    ? false
-    : (isLocalLoaded || !hasAI || Boolean(options?.useLocalJevModel) || Boolean(options?.useLocalEmbeddings));
 
   const source = Array.isArray(inputBookmarks) ? inputBookmarks : [];
   if (source.length === 0) return { success: true, results: [] };
@@ -2352,25 +1972,10 @@ async function handleGetAISuggestionsBatch(inputBookmarks, options = {}) {
     return { success: true, results };
   }
 
-  if (preferLocal || !hasAI) {
-    const localResults = await classifyBookmarksWithJevModel(aiBookmarks, existingFolders, {
-      allowCreateFolders,
-      newFolderLocation,
-      allowRecursive
-    });
-    for (const r of localResults) {
-      results.push(r);
-    }
-    const order = new Map(source.map((bm, index) => [String(bm.id), index]));
-    results.sort((a, b) => order.get(String(a.id)) - order.get(String(b.id)));
-    const activeEngineName = (typeof embeddingEngine !== 'undefined' && embeddingEngine?.modelName) || 'Local Model';
+  if (!hasAI) {
     return {
-      success: true,
-      results,
-      fromLocalModel: true,
-      fromJevModel: true,
-      fromLocalEmbedding: true,
-      modelUsed: activeEngineName
+      success: false,
+      error: 'No AI provider configured. Please configure an API key (Gemini, Claude, OpenAI, or OpenRouter) in Settings.'
     };
   }
 
@@ -2925,20 +2530,6 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
   // Set up health check alarm based on saved settings
   setupHealthCheckAlarm().catch(console.error);
-
-  // Automatically enable on-device smart sorting out-of-the-box
-  try {
-    const local = await chrome.storage.local.get(['useLocalJevModel', 'useLocalEmbeddings']);
-    if (local.useLocalJevModel === undefined) {
-      await chrome.storage.local.set({ useLocalJevModel: true, useLocalEmbeddings: true });
-    }
-    const hasData = await modelManager.hasModelData();
-    if (hasData) {
-      await modelManager.loadModel();
-    }
-  } catch (e) {
-    console.warn('Auto-initialization notice:', e);
-  }
 });
 
 // Handle context menu clicks

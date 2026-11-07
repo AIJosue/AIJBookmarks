@@ -30,10 +30,7 @@ This is a **Cross-Browser Extension (Chrome & Firefox Manifest v3)** — vanilla
 |---|---|
 | `background.js` | Service worker / background script — all core logic, AI dispatch, health checks, storage |
 | `popup.js` / `popup.html` | Extension popup UI |
-| `embedding-engine.js` | Local EmbeddingGemma-2 embedding model (node-llama-cpp) & sorting |
-| `model-manager.js` | Model downloader, cache & storage manager |
 | `health-check.js` / `health-check.html` | Link health audit manager & bulk fix tools |
-| `offscreen.js` / `offscreen.html` | Offscreen document runtime for WebGPU compute |
 | `options.js` / `options.html` | Settings page |
 | `manifest.json` | Extension config for Chrome (Manifest V3) |
 | `manifest.firefox.json` | Extension config for Firefox (Manifest V3 with Gecko ID) |
