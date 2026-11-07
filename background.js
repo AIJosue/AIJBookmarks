@@ -144,6 +144,18 @@ function initializeRootIds() {
   return rootIdsPromise;
 }
 
+function getProtectedRootIds() {
+  return new Set([
+    String(BOOKMARK_ROOT_IDS.ROOT || '0'),
+    String(BOOKMARK_ROOT_IDS.BAR || '1'),
+    String(BOOKMARK_ROOT_IDS.OTHER || '2'),
+    String(BOOKMARK_ROOT_IDS.MENU || 'menu________'),
+    String(BOOKMARK_ROOT_IDS.MOBILE || '3'),
+    '0', '1', '2', '3',
+    'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______'
+  ].filter(Boolean));
+}
+
 // Listen for messages from popup and health-check page
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const actionsWithResponse = [
@@ -358,53 +370,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       case 'getMiniCPMModelStatus':
       case 'getLLMModelStatus':
       case 'getLFMModelStatus':
-      case 'getJevModelStatus': {
-        const status = await modelManager.getStatus(request.modelId || 'minicpm5-1b');
-        sendResponse(status);
-        break;
-      }
+      case 'getJevModelStatus':
       case 'getEmbeddingModelStatus': {
-        const status = await modelManager.getStatus(request.modelId || 'embeddinggemma-2');
+        const defaultId = request.action === 'getEmbeddingModelStatus' ? 'embeddinggemma-2' : 'minicpm5-1b';
+        const status = await modelManager.getStatus(request.modelId || defaultId);
         sendResponse(status);
         break;
       }
       case 'loadMiniCPMModel':
       case 'loadLLMModel':
       case 'loadLFMModel':
-      case 'loadJevModel': {
-        const res = await modelManager.loadModel(request.modelId || 'minicpm5-1b');
-        sendResponse(res);
-        break;
-      }
+      case 'loadJevModel':
       case 'loadEmbeddingModel': {
-        const res = await modelManager.loadModel(request.modelId || 'embeddinggemma-2');
+        const defaultId = request.action === 'loadEmbeddingModel' ? 'embeddinggemma-2' : 'minicpm5-1b';
+        const res = await modelManager.loadModel(request.modelId || defaultId);
         sendResponse(res);
         break;
       }
       case 'unloadMiniCPMModel':
       case 'unloadLLMModel':
       case 'unloadLFMModel':
-      case 'unloadJevModel': {
-        const res = await modelManager.unloadModel(request.modelId || 'minicpm5-1b');
-        sendResponse(res);
-        break;
-      }
+      case 'unloadJevModel':
       case 'unloadEmbeddingModel': {
-        const res = await modelManager.unloadModel(request.modelId || 'embeddinggemma-2');
+        const defaultId = request.action === 'unloadEmbeddingModel' ? 'embeddinggemma-2' : 'minicpm5-1b';
+        const res = await modelManager.unloadModel(request.modelId || defaultId);
         sendResponse(res);
         break;
       }
       case 'startMiniCPMModelDownload':
       case 'startLLMModelDownload':
       case 'startLFMModelDownload':
-      case 'startJevModelDownload': {
-        const res = await modelManager.startDownload(request.modelId || 'minicpm5-1b', request.customModel);
-        sendResponse(res);
-        break;
-      }
+      case 'startJevModelDownload':
       case 'startEmbeddingModelDownload': {
-        const targetId = request.modelId || 'embeddinggemma-2';
-        const res = await modelManager.startDownload(targetId, request.customModel);
+        const defaultId = request.action === 'startEmbeddingModelDownload' ? 'embeddinggemma-2' : 'minicpm5-1b';
+        const res = await modelManager.startDownload(request.modelId || defaultId, request.customModel);
         sendResponse(res);
         break;
       }
@@ -440,16 +439,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       case 'deleteMiniCPMModel':
       case 'deleteLLMModel':
       case 'deleteLFMModel':
-      case 'deleteJevModel': {
-        const res = await modelManager.deleteModel(request.modelId || 'minicpm5-1b');
-        if (typeof embeddingEngine !== 'undefined' && typeof embeddingEngine.clearAllEmbeddings === 'function') {
-          await embeddingEngine.clearAllEmbeddings();
-        }
-        sendResponse(res);
-        break;
-      }
+      case 'deleteJevModel':
       case 'deleteEmbeddingModel': {
-        const res = await modelManager.deleteModel(request.modelId || 'embeddinggemma-2');
+        const defaultId = request.action === 'deleteEmbeddingModel' ? 'embeddinggemma-2' : 'minicpm5-1b';
+        const res = await modelManager.deleteModel(request.modelId || defaultId);
         if (typeof embeddingEngine !== 'undefined' && typeof embeddingEngine.clearAllEmbeddings === 'function') {
           await embeddingEngine.clearAllEmbeddings();
         }
@@ -628,13 +621,7 @@ async function computeBookmarkTreeData() {
     'mobile______': 'Mobile Bookmarks'
   };
   const allBookmarks = [];
-  const rootIds = new Set([
-    String(BOOKMARK_ROOT_IDS.ROOT), String(BOOKMARK_ROOT_IDS.BAR),
-    String(BOOKMARK_ROOT_IDS.OTHER), String(BOOKMARK_ROOT_IDS.MENU),
-    String(BOOKMARK_ROOT_IDS.MOBILE),
-    '0', '1', '2', '3',
-    'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______'
-  ].filter(Boolean));
+  const rootIds = getProtectedRootIds();
 
   function traverse(nodes, path = '') {
     for (const node of nodes || []) {
@@ -2566,13 +2553,7 @@ async function handleGetFolderOrganizationData() {
   await initializeRootIds();
   const tree = await chrome.bookmarks.getTree();
   const folders = [];
-  const rootIds = new Set([
-    String(BOOKMARK_ROOT_IDS.ROOT), String(BOOKMARK_ROOT_IDS.BAR),
-    String(BOOKMARK_ROOT_IDS.OTHER), String(BOOKMARK_ROOT_IDS.MENU),
-    String(BOOKMARK_ROOT_IDS.MOBILE),
-    '0', '1', '2', '3',
-    'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______'
-  ].filter(Boolean));
+  const rootIds = getProtectedRootIds();
 
   function summarize(node) {
     const children = node.children || [];
@@ -2681,13 +2662,7 @@ async function handleApplyFolderOrganizationPlan(inputOperations) {
   const tree = await chrome.bookmarks.getTree();
   const folderIds = new Set();
   const folderById = new Map();
-  const rootIds = new Set([
-    String(BOOKMARK_ROOT_IDS.ROOT), String(BOOKMARK_ROOT_IDS.BAR),
-    String(BOOKMARK_ROOT_IDS.OTHER), String(BOOKMARK_ROOT_IDS.MENU),
-    String(BOOKMARK_ROOT_IDS.MOBILE),
-    '0', '1', '2', '3',
-    'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______'
-  ].filter(Boolean));
+  const rootIds = getProtectedRootIds();
 
   function index(nodes) {
     for (const node of nodes || []) {
@@ -2737,15 +2712,7 @@ async function handleApplyFolderOrganizationPlan(inputOperations) {
  */
 async function buildCleanupPreview() {
   await initializeRootIds();
-  const protectedIds = new Set([
-    String(BOOKMARK_ROOT_IDS.ROOT || '0'),
-    String(BOOKMARK_ROOT_IDS.BAR || '1'),
-    String(BOOKMARK_ROOT_IDS.OTHER || '2'),
-    String(BOOKMARK_ROOT_IDS.MENU || 'menu________'),
-    String(BOOKMARK_ROOT_IDS.MOBILE || '3'),
-    '0', '1', '2', '3',
-    'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______'
-  ].filter(Boolean));
+  const protectedIds = getProtectedRootIds();
   const protectedTitles = new Set([
     'bookmarks bar', 'bookmarks toolbar', 'other bookmarks', 'unfiled bookmarks',
     'bookmarks menu', 'mobile bookmarks', 'synced bookmarks', 'bookmarks', 'other', 'menu', 'toolbar'
@@ -2803,15 +2770,7 @@ async function handleGetCleanupPreview() {
  */
 async function handleApplyCleanup(options) {
   await initializeRootIds();
-  const protectedIds = new Set([
-    String(BOOKMARK_ROOT_IDS.ROOT || '0'),
-    String(BOOKMARK_ROOT_IDS.BAR || '1'),
-    String(BOOKMARK_ROOT_IDS.OTHER || '2'),
-    String(BOOKMARK_ROOT_IDS.MENU || 'menu________'),
-    String(BOOKMARK_ROOT_IDS.MOBILE || '3'),
-    '0', '1', '2', '3',
-    'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______'
-  ].filter(Boolean));
+  const protectedIds = getProtectedRootIds();
 
   const removeDuplicates = options.removeDuplicateBookmarks === true;
   const removeEmpty = options.removeEmptyFolders === true;

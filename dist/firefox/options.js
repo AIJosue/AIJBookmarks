@@ -1202,178 +1202,221 @@ function formatBytes(bytes) {
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-function showModelProgress(percent, statsText) {
-  const container = document.getElementById('modelProgressContainer');
-  const bar = document.getElementById('modelProgressBar');
-  const percentText = document.getElementById('modelProgressPercent');
-  const stats = document.getElementById('modelProgressStats');
-
+function showSectionProgress(prefix, percent, statsText) {
+  const container = document.getElementById(`${prefix}ProgressContainer`);
+  const bar = document.getElementById(`${prefix}ProgressBar`);
+  const percentText = document.getElementById(`${prefix}ProgressPercent`);
+  const stats = document.getElementById(`${prefix}ProgressStats`);
   if (container) container.style.display = 'block';
   if (bar) bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
   if (percentText) percentText.textContent = `${percent}%`;
   if (stats && statsText) stats.textContent = statsText;
 }
 
-function showModelError(msg) {
-  const box = document.getElementById('modelErrorBox');
+function showSectionError(prefix, msg) {
+  const box = document.getElementById(`${prefix}ErrorBox`);
   if (box) {
     box.textContent = msg;
     box.style.display = 'block';
   }
 }
 
+function showModelProgress(percent, statsText) { showSectionProgress('model', percent, statsText); }
+function showCustomLLMProgress(percent, statsText) { showSectionProgress('customLLM', percent, statsText); }
+function showCustomModelProgress(percent, statsText) { showSectionProgress('customModel', percent, statsText); }
+
+const MODEL_CONFIGS = {
+  embeddingGemma: {
+    prefix: 'model',
+    btnSuffix: 'Model',
+    modelId: 'embeddinggemma-2',
+    testAction: 'testMiniCPMModel',
+    cancelAction: 'cancelEmbeddingModelDownload',
+    loadAction: 'loadEmbeddingModel',
+    unloadAction: 'unloadEmbeddingModel',
+    deleteAction: 'deleteEmbeddingModel',
+    name: 'EmbeddingGemma-2',
+    testBtnLabel: 'Test EmbeddingGemma Model',
+    testSuccessMsg: res => `EmbeddingGemma model verified! Classified test bookmark into "${res.matchedCategory}" (${Math.round((res.confidence || 0.95) * 100)}% confidence).`,
+    deleteConfirm: 'Are you sure you want to delete the local EmbeddingGemma-2 model (~168 MB) from storage?',
+    hints: {
+      loaded: 'EmbeddingGemma-2 embedding model is loaded in memory. Ready for instant offline vector embeddings, similarity search, and bookmark sorting.',
+      downloaded: 'Model is saved locally. Click "Load Model" to load it into memory for bookmark sorting.',
+      loading: 'Reading EmbeddingGemma-2 model weights from storage into memory...',
+      downloading: 'Downloading EmbeddingGemma-2 GGUF weights from Hugging Face...',
+      notDownloaded: 'Download EmbeddingGemma-2 (UD-Q4_K_XL, ~168 MB) to enable private offline vector embedding and bookmark sorting.'
+    },
+    notDownloadedBadge: 'Not Downloaded (Available on demand)'
+  },
+  customLLM: {
+    prefix: 'customLLM',
+    btnSuffix: 'CustomLLM',
+    modelId: 'custom-llm-model',
+    testAction: 'testLLMModel',
+    cancelAction: 'cancelLLMModelDownload',
+    loadAction: 'loadLLMModel',
+    unloadAction: 'unloadLLMModel',
+    deleteAction: 'deleteLLMModel',
+    name: 'Custom LLM',
+    testBtnLabel: 'Test Custom LLM',
+    testSuccessMsg: res => `Custom LLM verified! Classified test bookmark into "${res.matchedCategory}" (${Math.round((res.confidence || 0.95) * 100)}% confidence).`,
+    deleteConfirm: 'Are you sure you want to delete the custom LLM from storage?',
+    hints: {
+      loaded: 'Custom LLM is loaded in memory and actively used for bookmark sorting.',
+      downloaded: 'Custom LLM is saved locally. Click "Load Model" to use it.',
+      loading: 'Reading custom LLM weights from storage into memory...',
+      downloading: 'Downloading custom GGUF LLM...',
+      notDownloaded: 'Enter a valid URL to download and use a custom GGUF LLM.'
+    },
+    notDownloadedBadge: 'Not Downloaded'
+  },
+  customModel: {
+    prefix: 'customModel',
+    btnSuffix: 'CustomModel',
+    modelId: 'custom-embedding-model',
+    testAction: 'testEmbeddingModel',
+    cancelAction: 'cancelJevModelDownload',
+    loadAction: 'loadJevModel',
+    unloadAction: 'unloadJevModel',
+    deleteAction: 'deleteEmbeddingModel',
+    name: 'Custom model',
+    testBtnLabel: 'Test Custom Model',
+    testSuccessMsg: res => `Custom model verified! Classified test bookmark into "${res.matchedCategory}" (${res.vectorDimensions || 1024}-dim vector generated).`,
+    deleteConfirm: 'Are you sure you want to delete the custom embedding model from storage?',
+    hints: {
+      loaded: 'Custom model is loaded in memory and actively used for bookmark sorting.',
+      downloaded: 'Custom model is saved locally. Click "Load Model" to use it.',
+      loading: 'Reading custom model weights from storage into memory...',
+      downloading: 'Downloading custom GGUF model...',
+      notDownloaded: 'Enter a valid URL to download and use a custom GGUF embedding model.'
+    },
+    notDownloadedBadge: 'Not Downloaded'
+  }
+};
+
+function getModelElements(cfg) {
+  const p = cfg.prefix;
+  const s = cfg.btnSuffix;
+  return {
+    badge: document.getElementById(`${p}StatusBadge`),
+    indicator: document.getElementById('modelLoadedIndicator'),
+    btnDownload: document.getElementById(`btnDownload${s}`),
+    btnCancel: document.getElementById(`btnCancel${s}Download`),
+    btnLoad: document.getElementById(`btnLoad${s}`),
+    btnUnload: document.getElementById(`btnUnload${s}`),
+    btnDelete: document.getElementById(`btnDelete${s}`),
+    btnTest: document.getElementById(`btnTest${s}`),
+    progressContainer: document.getElementById(`${p}ProgressContainer`),
+    errorBox: document.getElementById(`${p}ErrorBox`),
+    hint: document.getElementById(`${p}StatusHint`)
+  };
+}
+
+function updateModelUI(cfg, status) {
+  const els = getModelElements(cfg);
+  if (!els.badge || !status) return;
+
+  if (els.errorBox) {
+    if (status.status === 'error' && status.error) {
+      els.errorBox.textContent = `Download error: ${status.error}`;
+      els.errorBox.style.display = 'block';
+    } else {
+      els.errorBox.style.display = 'none';
+    }
+  }
+
+  const isLoaded = status.status === 'loaded';
+  const isDownloaded = status.status === 'downloaded';
+  const isLoading = status.status === 'loading';
+  const isDownloading = status.status === 'downloading';
+
+  if (els.indicator) {
+    if (isLoaded) els.indicator.style.display = 'inline-block';
+    else if (cfg.prefix === 'model' || isDownloaded || isLoading || isDownloading) els.indicator.style.display = 'none';
+  }
+
+  if (isLoaded) {
+    els.badge.textContent = 'Loaded & Active';
+    els.badge.style.background = '#e6f4ea';
+    els.badge.style.color = '#137333';
+    if (els.hint) els.hint.textContent = cfg.hints.loaded;
+    if (els.btnDownload) els.btnDownload.style.display = 'none';
+    if (els.btnCancel) els.btnCancel.style.display = 'none';
+    if (els.btnLoad) els.btnLoad.style.display = 'none';
+    if (els.btnUnload) els.btnUnload.style.display = 'inline-block';
+    if (els.btnDelete) els.btnDelete.style.display = 'inline-block';
+    if (els.btnTest) els.btnTest.style.display = 'inline-block';
+    if (els.progressContainer) els.progressContainer.style.display = 'none';
+  } else if (isDownloaded) {
+    els.badge.textContent = 'Downloaded (Unloaded)';
+    els.badge.style.background = '#fef7e0';
+    els.badge.style.color = '#b06000';
+    if (els.hint) els.hint.textContent = cfg.hints.downloaded;
+    if (els.btnDownload) els.btnDownload.style.display = 'none';
+    if (els.btnCancel) els.btnCancel.style.display = 'none';
+    if (els.btnLoad) { els.btnLoad.style.display = 'inline-block'; els.btnLoad.disabled = false; }
+    if (els.btnUnload) els.btnUnload.style.display = 'none';
+    if (els.btnDelete) els.btnDelete.style.display = 'inline-block';
+    if (els.btnTest) els.btnTest.style.display = 'none';
+    if (els.progressContainer) els.progressContainer.style.display = 'none';
+  } else if (isLoading) {
+    els.badge.textContent = 'Loading into memory...';
+    els.badge.style.background = '#e8f0fe';
+    els.badge.style.color = '#1a73e8';
+    if (els.hint) els.hint.textContent = cfg.hints.loading;
+    if (els.btnDownload) els.btnDownload.style.display = 'none';
+    if (els.btnCancel) els.btnCancel.style.display = 'none';
+    if (els.btnLoad) { els.btnLoad.style.display = 'inline-block'; els.btnLoad.disabled = true; }
+    if (els.btnUnload) els.btnUnload.style.display = 'none';
+    if (els.btnDelete) els.btnDelete.style.display = 'none';
+    if (els.btnTest) els.btnTest.style.display = 'none';
+    if (els.progressContainer) els.progressContainer.style.display = 'none';
+  } else if (isDownloading) {
+    els.badge.textContent = `Downloading (${status.percent}%)`;
+    els.badge.style.background = '#e8f0fe';
+    els.badge.style.color = '#1a73e8';
+    if (els.hint) els.hint.textContent = cfg.hints.downloading;
+    if (els.btnDownload) els.btnDownload.style.display = 'none';
+    if (els.btnCancel) els.btnCancel.style.display = 'inline-block';
+    if (els.btnLoad) els.btnLoad.style.display = 'none';
+    if (els.btnUnload) els.btnUnload.style.display = 'none';
+    if (els.btnDelete) els.btnDelete.style.display = 'none';
+    if (els.btnTest) els.btnTest.style.display = 'none';
+    showSectionProgress(cfg.prefix, status.percent, `${formatBytes(status.downloadedBytes)} / ${formatBytes(status.totalBytes)} • ${status.speed} • ETA: ${status.eta}`);
+  } else {
+    els.badge.textContent = cfg.notDownloadedBadge;
+    els.badge.style.background = '#f1f3f4';
+    els.badge.style.color = '#5f6368';
+    if (els.hint) els.hint.textContent = cfg.hints.notDownloaded;
+    if (els.btnDownload) { els.btnDownload.style.display = 'inline-flex'; els.btnDownload.disabled = false; }
+    if (els.btnCancel) els.btnCancel.style.display = 'none';
+    if (els.btnLoad) els.btnLoad.style.display = 'none';
+    if (els.btnUnload) els.btnUnload.style.display = 'none';
+    if (els.btnDelete) els.btnDelete.style.display = 'none';
+    if (els.btnTest) els.btnTest.style.display = 'none';
+    if (els.progressContainer) els.progressContainer.style.display = 'none';
+  }
+}
+
 async function refreshEmbeddingModelUI() {
-  const badge = document.getElementById('modelStatusBadge');
-  const indicator = document.getElementById('modelLoadedIndicator');
-  const btnDownload = document.getElementById('btnDownloadModel');
-  const btnCancel = document.getElementById('btnCancelModelDownload');
-  const btnLoad = document.getElementById('btnLoadModel');
-  const btnUnload = document.getElementById('btnUnloadModel');
-  const btnDelete = document.getElementById('btnDeleteModel');
-  const btnTest = document.getElementById('btnTestModel');
-  const progressContainer = document.getElementById('modelProgressContainer');
-  const errorBox = document.getElementById('modelErrorBox');
-  const hint = document.getElementById('modelStatusHint');
-
-  if (!badge) return;
-
   try {
     const status = await chrome.runtime.sendMessage({ action: 'getEmbeddingModelStatus', modelId: 'embeddinggemma-2' });
-    if (!status) return;
-
-    if (errorBox) {
-      if (status.status === 'error' && status.error) {
-        errorBox.textContent = `Download error: ${status.error}`;
-        errorBox.style.display = 'block';
-      } else {
-        errorBox.style.display = 'none';
-      }
-    }
-
-    if (status.status === 'loaded') {
-      if (indicator) indicator.style.display = 'inline-block';
-      badge.textContent = 'Loaded & Active';
-      badge.style.background = '#e6f4ea';
-      badge.style.color = '#137333';
-      if (hint) hint.textContent = 'EmbeddingGemma-2 embedding model is loaded in memory. Ready for instant offline vector embeddings, similarity search, and bookmark sorting.';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'inline-block';
-      if (btnDelete) btnDelete.style.display = 'inline-block';
-      if (btnTest) btnTest.style.display = 'inline-block';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'downloaded') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = 'Downloaded (Unloaded)';
-      badge.style.background = '#fef7e0';
-      badge.style.color = '#b06000';
-      if (hint) hint.textContent = 'Model is saved locally. Click "Load Model" to load it into memory for bookmark sorting.';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'inline-block';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'inline-block';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'loading') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = 'Loading into memory...';
-      badge.style.background = '#e8f0fe';
-      badge.style.color = '#1a73e8';
-      if (hint) hint.textContent = 'Reading EmbeddingGemma-2 model weights from storage into memory...';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) {
-        btnLoad.style.display = 'inline-block';
-        btnLoad.disabled = true;
-      }
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'downloading') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = `Downloading (${status.percent}%)`;
-      badge.style.background = '#e8f0fe';
-      badge.style.color = '#1a73e8';
-      if (hint) hint.textContent = 'Downloading EmbeddingGemma-2 GGUF weights from Hugging Face...';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'inline-block';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-
-      showModelProgress(status.percent, `${formatBytes(status.downloadedBytes)} / ${formatBytes(status.totalBytes)} • ${status.speed} • ETA: ${status.eta}`);
-    } else {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = 'Not Downloaded (Available on demand)';
-      badge.style.background = '#f1f3f4';
-      badge.style.color = '#5f6368';
-      if (hint) hint.textContent = 'Download EmbeddingGemma-2 (UD-Q4_K_XL, ~168 MB) to enable private offline vector embedding and bookmark sorting.';
-
-      if (btnDownload) btnDownload.style.display = 'inline-flex';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    }
+    updateModelUI(MODEL_CONFIGS.embeddingGemma, status);
   } catch (err) {
     console.error('Error refreshing embedding model status:', err);
   }
 }
 
-function showCustomLLMProgress(percent, statsText) {
-  const container = document.getElementById('customLLMProgressContainer');
-  const bar = document.getElementById('customLLMProgressBar');
-  const percentText = document.getElementById('customLLMProgressPercent');
-  const stats = document.getElementById('customLLMProgressStats');
-
-  if (container) container.style.display = 'block';
-  if (bar) bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
-  if (percentText) percentText.textContent = `${percent}%`;
-  if (stats && statsText) stats.textContent = statsText;
-}
-
-function showCustomLLMError(msg) {
-  const box = document.getElementById('customLLMErrorBox');
-  if (box) {
-    box.textContent = msg;
-    box.style.display = 'block';
-  }
-}
-
 async function refreshCustomLLMUI() {
-  const badge = document.getElementById('customLLMStatusBadge');
-  const indicator = document.getElementById('modelLoadedIndicator');
   const title = document.getElementById('customLLMTitle');
   const sizeBadge = document.getElementById('customLLMSizeBadge');
-  const btnDownload = document.getElementById('btnDownloadCustomLLM');
-  const btnCancel = document.getElementById('btnCancelCustomLLMDownload');
-  const btnLoad = document.getElementById('btnLoadCustomLLM');
-  const btnUnload = document.getElementById('btnUnloadCustomLLM');
-  const btnDelete = document.getElementById('btnDeleteCustomLLM');
-  const btnTest = document.getElementById('btnTestCustomLLM');
-  const progressContainer = document.getElementById('customLLMProgressContainer');
-  const errorBox = document.getElementById('customLLMErrorBox');
-  const hint = document.getElementById('customLLMStatusHint');
   const urlInput = document.getElementById('customLLMUrl');
   const nameInput = document.getElementById('customLLMName');
   const contextInput = document.getElementById('customLLMContext');
 
-  if (!badge) return;
-
   try {
     const configRes = await chrome.runtime.sendMessage({ action: 'getCustomLLMConfig' }).catch(() => null);
     const config = configRes?.config;
-
     if (config) {
       if (title && config.name) title.textContent = config.name;
       if (sizeBadge && config.sizeDisplay) sizeBadge.textContent = config.sizeDisplay;
@@ -1385,145 +1428,24 @@ async function refreshCustomLLMUI() {
       if (sizeBadge) sizeBadge.textContent = 'Custom URL';
     }
 
-    const status = await chrome.runtime.sendMessage({
-      action: 'getLLMModelStatus',
-      modelId: 'custom-llm-model'
-    }).catch(() => null);
-    if (!status) return;
-
-    if (errorBox) {
-      if (status.status === 'error' && status.error) {
-        errorBox.textContent = `Download error: ${status.error}`;
-        errorBox.style.display = 'block';
-      } else {
-        errorBox.style.display = 'none';
-      }
-    }
-
-    if (status.status === 'loaded') {
-      if (indicator) indicator.style.display = 'inline-block';
-      badge.textContent = 'Loaded & Active';
-      badge.style.background = '#e6f4ea';
-      badge.style.color = '#137333';
-      if (hint) hint.textContent = 'Custom LLM is loaded in memory and actively used for bookmark sorting.';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'inline-block';
-      if (btnDelete) btnDelete.style.display = 'inline-block';
-      if (btnTest) btnTest.style.display = 'inline-block';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'downloaded') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = 'Downloaded (Unloaded)';
-      badge.style.background = '#fef7e0';
-      badge.style.color = '#b06000';
-      if (hint) hint.textContent = 'Custom LLM is saved locally. Click "Load Model" to use it.';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'inline-block';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'inline-block';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'loading') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = 'Loading into memory...';
-      badge.style.background = '#e8f0fe';
-      badge.style.color = '#1a73e8';
-      if (hint) hint.textContent = 'Reading custom LLM weights from storage into memory...';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) {
-        btnLoad.style.display = 'inline-block';
-        btnLoad.disabled = true;
-      }
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'downloading') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = `Downloading (${status.percent}%)`;
-      badge.style.background = '#e8f0fe';
-      badge.style.color = '#1a73e8';
-      if (hint) hint.textContent = 'Downloading custom GGUF LLM...';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'inline-block';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-
-      showCustomLLMProgress(status.percent, `${formatBytes(status.downloadedBytes)} / ${formatBytes(status.totalBytes)} • ${status.speed} • ETA: ${status.eta}`);
-    } else {
-      badge.textContent = 'Not Downloaded';
-      badge.style.background = '#f1f3f4';
-      badge.style.color = '#5f6368';
-      if (hint) hint.textContent = 'Enter a valid URL to download and use a custom GGUF LLM.';
-
-      if (btnDownload) btnDownload.style.display = 'inline-flex';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    }
+    const status = await chrome.runtime.sendMessage({ action: 'getLLMModelStatus', modelId: 'custom-llm-model' }).catch(() => null);
+    updateModelUI(MODEL_CONFIGS.customLLM, status);
   } catch (err) {
     console.error('Error refreshing custom LLM status:', err);
   }
 }
 
-function showCustomModelProgress(percent, statsText) {
-  const container = document.getElementById('customModelProgressContainer');
-  const bar = document.getElementById('customModelProgressBar');
-  const percentText = document.getElementById('customModelProgressPercent');
-  const stats = document.getElementById('customModelProgressStats');
-
-  if (container) container.style.display = 'block';
-  if (bar) bar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
-  if (percentText) percentText.textContent = `${percent}%`;
-  if (stats && statsText) stats.textContent = statsText;
-}
-
-function showCustomModelError(msg) {
-  const box = document.getElementById('customModelErrorBox');
-  if (box) {
-    box.textContent = msg;
-    box.style.display = 'block';
-  }
-}
-
 async function refreshCustomModelUI() {
-  const badge = document.getElementById('customModelStatusBadge');
-  const indicator = document.getElementById('modelLoadedIndicator');
   const title = document.getElementById('customModelTitle');
   const dimsBadge = document.getElementById('customModelDimsBadge');
   const sizeBadge = document.getElementById('customModelSizeBadge');
-  const btnDownload = document.getElementById('btnDownloadCustomModel');
-  const btnCancel = document.getElementById('btnCancelCustomModelDownload');
-  const btnLoad = document.getElementById('btnLoadCustomModel');
-  const btnUnload = document.getElementById('btnUnloadCustomModel');
-  const btnDelete = document.getElementById('btnDeleteCustomModel');
-  const btnTest = document.getElementById('btnTestCustomModel');
-  const progressContainer = document.getElementById('customModelProgressContainer');
-  const errorBox = document.getElementById('customModelErrorBox');
-  const hint = document.getElementById('customModelStatusHint');
   const urlInput = document.getElementById('customModelUrl');
   const nameInput = document.getElementById('customModelName');
   const dimsInput = document.getElementById('customModelDimensions');
 
-  if (!badge) return;
-
   try {
     const configRes = await chrome.runtime.sendMessage({ action: 'getCustomModelConfig' }).catch(() => null);
     const config = configRes?.config;
-
     if (config) {
       if (title && config.name) title.textContent = config.name;
       if (dimsBadge && config.dimensions) dimsBadge.textContent = `${config.dimensions} Dimensions`;
@@ -1537,406 +1459,176 @@ async function refreshCustomModelUI() {
       if (sizeBadge) sizeBadge.textContent = 'Custom URL';
     }
 
-    const status = await chrome.runtime.sendMessage({
-      action: 'getEmbeddingModelStatus',
-      modelId: 'custom-embedding-model'
-    }).catch(() => null);
-    if (!status) return;
-
-    if (errorBox) {
-      if (status.status === 'error' && status.error) {
-        errorBox.textContent = `Download error: ${status.error}`;
-        errorBox.style.display = 'block';
-      } else {
-        errorBox.style.display = 'none';
-      }
-    }
-
-    if (status.status === 'loaded') {
-      if (indicator) indicator.style.display = 'inline-block';
-      badge.textContent = 'Loaded & Active';
-      badge.style.background = '#e6f4ea';
-      badge.style.color = '#137333';
-      if (hint) hint.textContent = 'Custom model is loaded in memory and actively used for bookmark sorting.';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'inline-block';
-      if (btnDelete) btnDelete.style.display = 'inline-block';
-      if (btnTest) btnTest.style.display = 'inline-block';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'downloaded') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = 'Downloaded (Unloaded)';
-      badge.style.background = '#fef7e0';
-      badge.style.color = '#b06000';
-      if (hint) hint.textContent = 'Custom model is saved locally. Click "Load Model" to use it.';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'inline-block';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'inline-block';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'loading') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = 'Loading into memory...';
-      badge.style.background = '#e8f0fe';
-      badge.style.color = '#1a73e8';
-      if (hint) hint.textContent = 'Reading custom model weights from storage into memory...';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) {
-        btnLoad.style.display = 'inline-block';
-        btnLoad.disabled = true;
-      }
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    } else if (status.status === 'downloading') {
-      if (indicator) indicator.style.display = 'none';
-      badge.textContent = `Downloading (${status.percent}%)`;
-      badge.style.background = '#e8f0fe';
-      badge.style.color = '#1a73e8';
-      if (hint) hint.textContent = 'Downloading custom GGUF model...';
-
-      if (btnDownload) btnDownload.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'inline-block';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-
-      showCustomModelProgress(status.percent, `${formatBytes(status.downloadedBytes)} / ${formatBytes(status.totalBytes)} • ${status.speed} • ETA: ${status.eta}`);
-    } else {
-      badge.textContent = 'Not Downloaded';
-      badge.style.background = '#f1f3f4';
-      badge.style.color = '#5f6368';
-      if (hint) hint.textContent = 'Enter a valid URL to download and use a custom GGUF embedding model.';
-
-      if (btnDownload) btnDownload.style.display = 'inline-flex';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnLoad) btnLoad.style.display = 'none';
-      if (btnUnload) btnUnload.style.display = 'none';
-      if (btnDelete) btnDelete.style.display = 'none';
-      if (btnTest) btnTest.style.display = 'none';
-      if (progressContainer) progressContainer.style.display = 'none';
-    }
+    const status = await chrome.runtime.sendMessage({ action: 'getEmbeddingModelStatus', modelId: 'custom-embedding-model' }).catch(() => null);
+    updateModelUI(MODEL_CONFIGS.customModel, status);
   } catch (err) {
     console.error('Error refreshing custom model status:', err);
   }
 }
 
-function initCustomEmbeddingModelUI() {
-  const btnDownload = document.getElementById('btnDownloadCustomModel');
-  const btnCancel = document.getElementById('btnCancelCustomModelDownload');
-  const btnLoad = document.getElementById('btnLoadCustomModel');
-  const btnUnload = document.getElementById('btnUnloadCustomModel');
-  const btnDelete = document.getElementById('btnDeleteCustomModel');
-  const btnTest = document.getElementById('btnTestCustomModel');
-  const urlInput = document.getElementById('customModelUrl');
-  const nameInput = document.getElementById('customModelName');
-  const dimsInput = document.getElementById('customModelDimensions');
-  const errorBox = document.getElementById('customModelErrorBox');
+function bindModelActions(cfg, refreshFn, getCustomPayload) {
+  const els = getModelElements(cfg);
+  if (!els.badge) return;
 
-  if (btnDownload) {
-    btnDownload.addEventListener('click', async () => {
-      const url = urlInput?.value?.trim() || '';
-      if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-        showCustomModelError('Please enter a valid HTTP or HTTPS URL to the GGUF model.');
-        return;
+  if (els.btnDownload) {
+    els.btnDownload.addEventListener('click', async () => {
+      let customModel = null;
+      if (getCustomPayload) {
+        customModel = getCustomPayload();
+        if (!customModel) return;
       }
-
-      const name = nameInput?.value?.trim() || '';
-      const dimensions = parseInt(dimsInput?.value, 10) || 1024;
-
-      if (errorBox) errorBox.style.display = 'none';
-      btnDownload.disabled = true;
-      showCustomModelProgress(0, 'Starting download...');
-
+      if (els.errorBox) els.errorBox.style.display = 'none';
+      els.btnDownload.disabled = true;
+      showSectionProgress(cfg.prefix, 0, 'Starting download...');
       try {
-        const res = await chrome.runtime.sendMessage({
-          action: 'startJevModelDownload',
-          modelId: 'custom-embedding-model',
-          customModel: {
-            url,
-            name,
-            dimensions
-          }
-        });
-        if (res && res.status === 'error') {
-          showCustomModelError(res.error || 'Failed to start download');
+        const payload = { action: cfg.startAction, modelId: cfg.modelId };
+        if (customModel) payload.customModel = customModel;
+        const res = await chrome.runtime.sendMessage(payload);
+        if (res?.status === 'error') {
+          showSectionError(cfg.prefix, res.error || 'Failed to start download');
         }
       } catch (err) {
-        showCustomModelError('Failed to start download: ' + err.message);
+        showSectionError(cfg.prefix, 'Failed to start download: ' + err.message);
       } finally {
-        btnDownload.disabled = false;
-        refreshCustomModelUI();
+        els.btnDownload.disabled = false;
+        refreshFn();
       }
     });
   }
 
-  if (btnCancel) {
-    btnCancel.addEventListener('click', async () => {
-      btnCancel.disabled = true;
+  if (els.btnCancel) {
+    els.btnCancel.addEventListener('click', async () => {
+      els.btnCancel.disabled = true;
       try {
-        await chrome.runtime.sendMessage({
-          action: 'cancelJevModelDownload',
-          modelId: 'custom-embedding-model'
-        });
+        await chrome.runtime.sendMessage({ action: cfg.cancelAction, modelId: cfg.modelId });
       } catch (err) {
-        showCustomModelError('Failed to cancel download: ' + err.message);
+        showSectionError(cfg.prefix, 'Failed to cancel download: ' + err.message);
       } finally {
-        btnCancel.disabled = false;
-        refreshCustomModelUI();
+        els.btnCancel.disabled = false;
+        refreshFn();
       }
     });
   }
 
-  if (btnLoad) {
-    btnLoad.addEventListener('click', async () => {
-      btnLoad.disabled = true;
-      btnLoad.textContent = 'Loading...';
+  if (els.btnLoad) {
+    els.btnLoad.addEventListener('click', async () => {
+      els.btnLoad.disabled = true;
+      els.btnLoad.textContent = 'Loading...';
       try {
-        const res = await chrome.runtime.sendMessage({
-          action: 'loadJevModel',
-          modelId: 'custom-embedding-model'
-        });
-        if (!res?.success) throw new Error(res?.error || 'Failed to load custom model');
-        showStatus('Custom model loaded into memory successfully!', 'success');
+        const res = await chrome.runtime.sendMessage({ action: cfg.loadAction, modelId: cfg.modelId });
+        if (!res?.success) throw new Error(res?.error || `Failed to load ${cfg.name}`);
+        showStatus(`${cfg.name} loaded into memory successfully!`, 'success');
       } catch (err) {
-        showCustomModelError('Failed to load custom model: ' + err.message);
+        showSectionError(cfg.prefix, `Failed to load ${cfg.name}: ` + err.message);
       } finally {
-        btnLoad.disabled = false;
-        btnLoad.textContent = 'Load Model';
-        refreshCustomModelUI();
+        els.btnLoad.disabled = false;
+        els.btnLoad.textContent = 'Load Model';
+        refreshFn();
       }
     });
   }
 
-  if (btnUnload) {
-    btnUnload.addEventListener('click', async () => {
-      btnUnload.disabled = true;
-      btnUnload.textContent = 'Unloading...';
+  if (els.btnUnload) {
+    els.btnUnload.addEventListener('click', async () => {
+      els.btnUnload.disabled = true;
+      els.btnUnload.textContent = 'Unloading...';
       try {
-        await chrome.runtime.sendMessage({
-          action: 'unloadJevModel',
-          modelId: 'custom-embedding-model'
-        });
-        showStatus('Custom model unloaded from memory.', 'info');
+        await chrome.runtime.sendMessage({ action: cfg.unloadAction, modelId: cfg.modelId });
+        showStatus(`${cfg.name} unloaded from memory.`, 'info');
       } catch (err) {
-        showCustomModelError('Failed to unload custom model: ' + err.message);
+        showSectionError(cfg.prefix, `Failed to unload ${cfg.name}: ` + err.message);
       } finally {
-        btnUnload.disabled = false;
-        btnUnload.textContent = 'Unload Model';
-        refreshCustomModelUI();
+        els.btnUnload.disabled = false;
+        els.btnUnload.textContent = 'Unload Model';
+        refreshFn();
       }
     });
   }
 
-  if (btnTest) {
-    btnTest.addEventListener('click', async () => {
-      btnTest.disabled = true;
-      btnTest.textContent = 'Testing...';
+  if (els.btnDelete) {
+    els.btnDelete.addEventListener('click', async () => {
+      if (!confirm(cfg.deleteConfirm)) return;
+      els.btnDelete.disabled = true;
       try {
-        const res = await chrome.runtime.sendMessage({
-          action: 'testEmbeddingModel',
-          modelId: 'custom-embedding-model'
-        });
-        if (res && res.success) {
-          const dims = res.vectorDimensions || 1024;
-          showStatus(`Custom model verified! Classified test bookmark into "${res.matchedCategory}" (${dims}-dim vector generated).`, 'success');
+        await chrome.runtime.sendMessage({ action: cfg.deleteAction, modelId: cfg.modelId });
+      } catch (err) {
+        showSectionError(cfg.prefix, `Failed to delete ${cfg.name}: ` + err.message);
+      } finally {
+        els.btnDelete.disabled = false;
+        refreshFn();
+      }
+    });
+  }
+
+  if (els.btnTest) {
+    els.btnTest.addEventListener('click', async () => {
+      els.btnTest.disabled = true;
+      els.btnTest.textContent = 'Testing...';
+      try {
+        const payload = { action: cfg.testAction };
+        if (cfg.modelId !== 'embeddinggemma-2') payload.modelId = cfg.modelId;
+        const res = await chrome.runtime.sendMessage(payload);
+        if (res?.success) {
+          showStatus(cfg.testSuccessMsg(res), 'success');
         } else {
           showStatus('Test failed: ' + (res ? res.error : 'Unknown error'), 'error');
         }
       } catch (err) {
         showStatus('Test error: ' + err.message, 'error');
       } finally {
-        btnTest.disabled = false;
-        btnTest.textContent = 'Test Custom Model';
-      }
-    });
-  }
-
-  if (btnDelete) {
-    btnDelete.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to delete the custom embedding model from storage?')) {
-        return;
-      }
-      btnDelete.disabled = true;
-      try {
-        await chrome.runtime.sendMessage({
-          action: 'deleteEmbeddingModel',
-          modelId: 'custom-embedding-model'
-        });
-      } catch (err) {
-        showCustomModelError('Failed to delete custom model: ' + err.message);
-      } finally {
-        btnDelete.disabled = false;
-        refreshCustomModelUI();
+        els.btnTest.disabled = false;
+        els.btnTest.textContent = cfg.testBtnLabel;
       }
     });
   }
 }
 
-function initCustomLLMUI() {
-  const btnDownload = document.getElementById('btnDownloadCustomLLM');
-  const btnCancel = document.getElementById('btnCancelCustomLLMDownload');
-  const btnLoad = document.getElementById('btnLoadCustomLLM');
-  const btnUnload = document.getElementById('btnUnloadCustomLLM');
-  const btnDelete = document.getElementById('btnDeleteCustomLLM');
-  const btnTest = document.getElementById('btnTestCustomLLM');
-  const urlInput = document.getElementById('customLLMUrl');
-  const nameInput = document.getElementById('customLLMName');
-  const contextInput = document.getElementById('customLLMContext');
-  const errorBox = document.getElementById('customLLMErrorBox');
-
-  if (btnDownload) {
-    btnDownload.addEventListener('click', async () => {
+function initCustomEmbeddingModelUI() {
+  bindModelActions(
+    { ...MODEL_CONFIGS.customModel, startAction: 'startJevModelDownload' },
+    refreshCustomModelUI,
+    () => {
+      const urlInput = document.getElementById('customModelUrl');
+      const nameInput = document.getElementById('customModelName');
+      const dimsInput = document.getElementById('customModelDimensions');
       const url = urlInput?.value?.trim() || '';
       if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-        showCustomLLMError('Please enter a valid HTTP or HTTPS URL to the GGUF model.');
-        return;
+        showSectionError('customModel', 'Please enter a valid HTTP or HTTPS URL to the GGUF model.');
+        return null;
       }
+      return {
+        url,
+        name: nameInput?.value?.trim() || '',
+        dimensions: parseInt(dimsInput?.value, 10) || 1024
+      };
+    }
+  );
+}
 
-      const name = nameInput?.value?.trim() || '';
-      const contextWindow = parseInt(contextInput?.value, 10) || 32768;
-
-      if (errorBox) errorBox.style.display = 'none';
-      btnDownload.disabled = true;
-      showCustomLLMProgress(0, 'Starting download...');
-
-      try {
-        const res = await chrome.runtime.sendMessage({
-          action: 'startLLMModelDownload',
-          modelId: 'custom-llm-model',
-          customModel: {
-            url,
-            name,
-            contextWindow,
-            isLLM: true,
-            isInstructModel: true,
-            isEmbeddingModel: false,
-            architecture: 'custom-llm'
-          }
-        });
-        if (res && res.status === 'error') {
-          showCustomLLMError(res.error || 'Failed to start download');
-        }
-      } catch (err) {
-        showCustomLLMError('Failed to start download: ' + err.message);
-      } finally {
-        btnDownload.disabled = false;
-        refreshCustomLLMUI();
+function initCustomLLMUI() {
+  bindModelActions(
+    { ...MODEL_CONFIGS.customLLM, startAction: 'startLLMModelDownload' },
+    refreshCustomLLMUI,
+    () => {
+      const urlInput = document.getElementById('customLLMUrl');
+      const nameInput = document.getElementById('customLLMName');
+      const contextInput = document.getElementById('customLLMContext');
+      const url = urlInput?.value?.trim() || '';
+      if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+        showSectionError('customLLM', 'Please enter a valid HTTP or HTTPS URL to the GGUF model.');
+        return null;
       }
-    });
-  }
-
-  if (btnCancel) {
-    btnCancel.addEventListener('click', async () => {
-      btnCancel.disabled = true;
-      try {
-        await chrome.runtime.sendMessage({
-          action: 'cancelLLMModelDownload',
-          modelId: 'custom-llm-model'
-        });
-      } catch (err) {
-        showCustomLLMError('Failed to cancel download: ' + err.message);
-      } finally {
-        btnCancel.disabled = false;
-        refreshCustomLLMUI();
-      }
-    });
-  }
-
-  if (btnLoad) {
-    btnLoad.addEventListener('click', async () => {
-      btnLoad.disabled = true;
-      btnLoad.textContent = 'Loading...';
-      try {
-        const res = await chrome.runtime.sendMessage({
-          action: 'loadLLMModel',
-          modelId: 'custom-llm-model'
-        });
-        if (!res?.success) throw new Error(res?.error || 'Failed to load custom LLM');
-        showStatus('Custom LLM loaded into memory successfully!', 'success');
-      } catch (err) {
-        showCustomLLMError('Failed to load custom LLM: ' + err.message);
-      } finally {
-        btnLoad.disabled = false;
-        btnLoad.textContent = 'Load Model';
-        refreshCustomLLMUI();
-      }
-    });
-  }
-
-  if (btnUnload) {
-    btnUnload.addEventListener('click', async () => {
-      btnUnload.disabled = true;
-      btnUnload.textContent = 'Unloading...';
-      try {
-        await chrome.runtime.sendMessage({
-          action: 'unloadLLMModel',
-          modelId: 'custom-llm-model'
-        });
-        showStatus('Custom LLM unloaded from memory.', 'info');
-      } catch (err) {
-        showCustomLLMError('Failed to unload custom LLM: ' + err.message);
-      } finally {
-        btnUnload.disabled = false;
-        btnUnload.textContent = 'Unload Model';
-        refreshCustomLLMUI();
-      }
-    });
-  }
-
-  if (btnTest) {
-    btnTest.addEventListener('click', async () => {
-      btnTest.disabled = true;
-      btnTest.textContent = 'Testing...';
-      try {
-        const res = await chrome.runtime.sendMessage({
-          action: 'testLLMModel',
-          modelId: 'custom-llm-model'
-        });
-        if (res && res.success) {
-          const conf = Math.round((res.confidence || 0.95) * 100);
-          showStatus(`Custom LLM verified! Classified test bookmark into "${res.matchedCategory}" (${conf}% confidence).`, 'success');
-        } else {
-          showStatus('Test failed: ' + (res ? res.error : 'Unknown error'), 'error');
-        }
-      } catch (err) {
-        showStatus('Test error: ' + err.message, 'error');
-      } finally {
-        btnTest.disabled = false;
-        btnTest.textContent = 'Test Custom LLM';
-      }
-    });
-  }
-
-  if (btnDelete) {
-    btnDelete.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to delete the custom LLM from storage?')) {
-        return;
-      }
-      btnDelete.disabled = true;
-      try {
-        await chrome.runtime.sendMessage({
-          action: 'deleteLLMModel',
-          modelId: 'custom-llm-model'
-        });
-      } catch (err) {
-        showCustomLLMError('Failed to delete custom LLM: ' + err.message);
-      } finally {
-        btnDelete.disabled = false;
-        refreshCustomLLMUI();
-      }
-    });
-  }
+      return {
+        url,
+        name: nameInput?.value?.trim() || '',
+        contextWindow: parseInt(contextInput?.value, 10) || 32768,
+        isLLM: true,
+        isInstructModel: true,
+        isEmbeddingModel: false,
+        architecture: 'custom-llm'
+      };
+    }
+  );
 }
 
 function initLocalEmbeddingModelUI() {
@@ -1977,125 +1669,22 @@ function initLocalEmbeddingModelUI() {
 
   initCustomLLMUI();
   initCustomEmbeddingModelUI();
-  const btnDownload = document.getElementById('btnDownloadModel');
-  const btnCancel = document.getElementById('btnCancelModelDownload');
-  const btnLoad = document.getElementById('btnLoadModel');
-  const btnUnload = document.getElementById('btnUnloadModel');
-  const btnDelete = document.getElementById('btnDeleteModel');
-  const btnTest = document.getElementById('btnTestModel');
-
-  if (btnDownload) {
-    btnDownload.addEventListener('click', async () => {
-      btnDownload.disabled = true;
-      showModelProgress(0, 'Starting download...');
-      try {
-        await chrome.runtime.sendMessage({ action: 'startEmbeddingModelDownload', modelId: 'embeddinggemma-2' });
-      } catch (err) {
-        showModelError('Failed to start download: ' + err.message);
-      } finally {
-        btnDownload.disabled = false;
-        refreshEmbeddingModelUI();
-      }
-    });
-  }
-
-  if (btnCancel) {
-    btnCancel.addEventListener('click', async () => {
-      btnCancel.disabled = true;
-      try {
-        await chrome.runtime.sendMessage({ action: 'cancelEmbeddingModelDownload', modelId: 'embeddinggemma-2' });
-      } catch (err) {
-        showModelError('Failed to cancel download: ' + err.message);
-      } finally {
-        btnCancel.disabled = false;
-        refreshEmbeddingModelUI();
-      }
-    });
-  }
-
-  if (btnLoad) {
-    btnLoad.addEventListener('click', async () => {
-      btnLoad.disabled = true;
-      btnLoad.textContent = 'Loading...';
-      try {
-        const res = await chrome.runtime.sendMessage({ action: 'loadEmbeddingModel', modelId: 'embeddinggemma-2' });
-        if (!res?.success) throw new Error(res?.error || 'Failed to load model');
-        showStatus('Model loaded into memory successfully!', 'success');
-      } catch (err) {
-        showModelError('Failed to load model: ' + err.message);
-      } finally {
-        btnLoad.disabled = false;
-        btnLoad.textContent = 'Load Model';
-        refreshEmbeddingModelUI();
-      }
-    });
-  }
-
-  if (btnUnload) {
-    btnUnload.addEventListener('click', async () => {
-      btnUnload.disabled = true;
-      btnUnload.textContent = 'Unloading...';
-      try {
-        await chrome.runtime.sendMessage({ action: 'unloadEmbeddingModel', modelId: 'embeddinggemma-2' });
-        showStatus('Model unloaded from memory.', 'info');
-      } catch (err) {
-        showModelError('Failed to unload model: ' + err.message);
-      } finally {
-        btnUnload.disabled = false;
-        btnUnload.textContent = 'Unload Model';
-        refreshEmbeddingModelUI();
-      }
-    });
-  }
-
-  if (btnDelete) {
-    btnDelete.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to delete the local EmbeddingGemma-2 model (~168 MB) from storage?')) {
-        return;
-      }
-      btnDelete.disabled = true;
-      try {
-        await chrome.runtime.sendMessage({ action: 'deleteEmbeddingModel', modelId: 'embeddinggemma-2' });
-      } catch (err) {
-        showModelError('Failed to delete model: ' + err.message);
-      } finally {
-        btnDelete.disabled = false;
-        refreshEmbeddingModelUI();
-      }
-    });
-  }
-
-  if (btnTest) {
-    btnTest.addEventListener('click', async () => {
-      btnTest.disabled = true;
-      btnTest.textContent = 'Testing...';
-      try {
-        const res = await chrome.runtime.sendMessage({ action: 'testMiniCPMModel' });
-        if (res && res.success) {
-          const conf = Math.round((res.confidence || 0.95) * 100);
-          showStatus(`EmbeddingGemma model verified! Classified test bookmark into "${res.matchedCategory}" (${conf}% confidence).`, 'success');
-        } else {
-          showStatus('Test failed: ' + (res ? res.error : 'Unknown error'), 'error');
-        }
-      } catch (err) {
-        showStatus('Test error: ' + err.message, 'error');
-      } finally {
-        btnTest.disabled = false;
-        btnTest.textContent = 'Test EmbeddingGemma Model';
-      }
-    });
-  }
+  bindModelActions(
+    { ...MODEL_CONFIGS.embeddingGemma, startAction: 'startEmbeddingModelDownload' },
+    refreshEmbeddingModelUI
+  );
 
   // Listen for background progress messages
   chrome.runtime.onMessage.addListener((message) => {
     if (message.action === 'llmModelProgress' || message.action === 'jevModelProgress' || message.action === 'embeddingModelProgress') {
       const prog = message.progress;
+      const stats = `${formatBytes(prog.downloadedBytes)} / ${formatBytes(prog.totalBytes)} • ${prog.speed} • ETA: ${prog.eta}`;
       if (message.modelId === 'custom-llm-model') {
-        showCustomLLMProgress(prog.percent, `${formatBytes(prog.downloadedBytes)} / ${formatBytes(prog.totalBytes)} • ${prog.speed} • ETA: ${prog.eta}`);
+        showCustomLLMProgress(prog.percent, stats);
       } else if (message.modelId === 'custom-embedding-model') {
-        showCustomModelProgress(prog.percent, `${formatBytes(prog.downloadedBytes)} / ${formatBytes(prog.totalBytes)} • ${prog.speed} • ETA: ${prog.eta}`);
+        showCustomModelProgress(prog.percent, stats);
       } else {
-        showModelProgress(prog.percent, `${formatBytes(prog.downloadedBytes)} / ${formatBytes(prog.totalBytes)} • ${prog.speed} • ETA: ${prog.eta}`);
+        showModelProgress(prog.percent, stats);
       }
     } else if (message.action === 'llmModelStatusChanged' || message.action === 'jevModelStatusChanged' || message.action === 'embeddingModelStatusChanged') {
       refreshEmbeddingModelUI();
