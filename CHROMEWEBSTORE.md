@@ -39,7 +39,7 @@ PERMISSIONS
 SUPPORT
 Found a bug? Have a suggestion? Open an issue on our GitHub repository: https://github.com/AIJosue/AIJbookmarks
 
-Version 3.3.0 — Revamped Link Health Check with live counters, Cloudflare/bot challenge protection, in-memory RAM session storage, and Readwise/Raindrop integrations.
+Version 3.4.0 — Streamlined Cloud AI architecture (Anthropic Claude, OpenAI, Google Gemini, OpenRouter), dynamic on-demand model fetching via "Load Models", removed local model dependencies, improved Firefox Desktop compatibility, and enhanced link health diagnostics.
 
 **Category**
 Productivity
@@ -139,6 +139,7 @@ https://github.com/AIJosue/AIJbookmarks
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 3.4.0 | 2026-11-07 | Streamlined AI configuration for cloud providers, on-demand model loading with "Load Models", removed local model bloat and dependencies, enhanced desktop Chrome and Firefox support. | Draft |
 | 3.1.0 | 2026-05-24 | Added "Checked by Default" configuration settings for each integration, enabling users to choose default checked/unchecked states for Instapaper, Todoist, Things, Readwise, and Raindrop.io in the popup. | Draft |
 | 2.3.2 | 2026-05-24 | Added "Delete Bookmark" support directly in the Bookmark Inbox interface, including modal confirmation, safe removal, and automatic list refreshing. | Draft |
 | 2.3.1 | 2026-05-24 | Fixed critical "Can't find bookmark for id" errors on launch/inbox load in customized profiles and other browsers (Edge/Arc) by dynamically resolving root folder IDs and wrapping getChildren in safe error-catch blocks. | Draft |
