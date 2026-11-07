@@ -48,6 +48,16 @@
 
 ---
 
+## 💻 Supported Platforms: Desktop Only
+
+> [!IMPORTANT]
+> **AIJbookmarks officially supports Firefox Desktop and Chrome Desktop only.**
+> Firefox for Android is explicitly not supported. Mozilla's mobile engine (GeckoView / Firefox for Android) does not implement the WebExtensions Bookmarks API (`browser.bookmarks` / `chrome.bookmarks`, tracked under Mozilla Bugzilla [Bug 1796596](https://bugzilla.mozilla.org/show_bug.cgi?id=1796596)).
+> 
+> To organize bookmarks created on mobile, enable **Firefox Sync** to sync them to Firefox Desktop (under "Mobile Bookmarks"), where AIJbookmarks provides full AI organization and management.
+
+---
+
 ## 🛠️ Building & Packaging
 
 ```bash

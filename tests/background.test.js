@@ -386,6 +386,27 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
     assert.strictEqual(folderResult.scopeLabel, 'direct bookmarks in “Bookmarks Menu”');
   });
 
+  it('should return unsupported error cleanly when chrome.bookmarks is unavailable (Firefox Android environment)', async () => {
+    const originalGetChildren = globalThis.chrome.bookmarks.getChildren;
+    const originalGetTree = globalThis.chrome.bookmarks.getTree;
+    try {
+      delete globalThis.chrome.bookmarks.getChildren;
+      delete globalThis.chrome.bookmarks.getTree;
+
+      const unsorted = await getUnsortedBookmarks({ type: 'roots' });
+      assert.strictEqual(unsorted.unsupported, true);
+      assert.strictEqual(Array.isArray(unsorted.bookmarks), true);
+      assert.strictEqual(unsorted.bookmarks.length, 0);
+
+      const folders = await getSortingScopeFolders();
+      assert.strictEqual(Array.isArray(folders), true);
+      assert.strictEqual(folders.length, 0);
+    } finally {
+      globalThis.chrome.bookmarks.getChildren = originalGetChildren;
+      globalThis.chrome.bookmarks.getTree = originalGetTree;
+    }
+  });
+
   it('should initialize and execute cleanly in Firefox without onChildrenReordered API', async () => {
     delete globalThis.chrome.bookmarks.onChildrenReordered;
     const fs = await import('fs');

@@ -1,7 +1,7 @@
 <div align="center">
   <img src="icons/icon128.png" alt="AIJbookmarks Logo" width="100" height="100">
   <h1>AIJbookmarks</h1>
-  <p><strong>Intelligent AI-powered bookmark organizer, on-device EmbeddingGemma-2 embedding model sorting, and link health dashboard for Google Chrome & Mozilla Firefox.</strong></p>
+  <p><strong>Intelligent AI-powered bookmark organizer, on-device EmbeddingGemma-2 embedding model sorting, and link health dashboard for Google Chrome Desktop & Mozilla Firefox Desktop.</strong></p>
 </div>
 
 ---
@@ -104,6 +104,11 @@ Your data is never tracked, stored on third-party servers, or shared with anyone
 ---
 
 ## ❓ Frequently Asked Questions (FAQ)
+
+<details>
+<summary><strong>Is Firefox for Android supported?</strong></summary>
+No. Mozilla's mobile engine (GeckoView / Firefox for Android) does not implement the WebExtensions Bookmarks API (tracked under Mozilla Bugzilla <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1796596" target="_blank">Bug 1796596</a>). To organize mobile bookmarks, enable <strong>Firefox Sync</strong> to sync them to Firefox Desktop (under "Mobile Bookmarks"), where AIJbookmarks can organize and sort them automatically.
+</details>
 
 <details>
 <summary><strong>Where are my bookmarks saved?</strong></summary>

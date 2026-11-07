@@ -2,18 +2,18 @@
 const DEFAULT_SETTINGS = {
   aiProvider: 'anthropic',
   anthropicApiKey: '',
-  anthropicModel: '',
+  anthropicModel: 'claude-3-5-haiku-20241022',
   openaiApiKey: '',
   openaiBaseUrl: 'https://api.openai.com/v1',
-  openaiModel: '',
+  openaiModel: 'gpt-4o-mini',
   openaiCustomModel: '',
   modelContextWindow: 131072,
   openrouterApiKey: '',
-  openrouterModel: '',
+  openrouterModel: 'anthropic/claude-3.5-haiku',
   geminiApiKey: '',
-  geminiModel: '',
+  geminiModel: 'gemini-2.5-flash',
   googleCloudApiKey: '',
-  googleCloudModel: '',
+  googleCloudModel: 'gemini-2.5-flash',
   localModelContext: 8192,
   instapaperUsername: '',
   instapaperPassword: '',
@@ -702,10 +702,10 @@ async function loadSettings() {
       }
     }
 
-    ensureSelectHasValue('openrouterModel', settings.openrouterModel);
-    ensureSelectHasValue('geminiModel', settings.geminiModel);
-    ensureSelectHasValue('googleCloudModel', settings.googleCloudModel);
-    ensureSelectHasValue('anthropicModel', settings.anthropicModel);
+    ensureSelectHasValue('openrouterModel', settings.openrouterModel || 'anthropic/claude-3.5-haiku');
+    ensureSelectHasValue('geminiModel', settings.geminiModel || 'gemini-2.5-flash');
+    ensureSelectHasValue('googleCloudModel', settings.googleCloudModel || 'gemini-2.5-flash');
+    ensureSelectHasValue('anthropicModel', settings.anthropicModel || 'claude-3-5-haiku-20241022');
 
     const modelContextVal = snapToNearestBinaryContext(settings.modelContextWindow || 131072);
     document.getElementById('modelContextWindow').value = modelContextVal;

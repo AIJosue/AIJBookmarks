@@ -279,6 +279,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case 'getSortingScopeFolders': {
+        if (!chrome.bookmarks?.getTree) {
+          sendResponse({
+            success: false,
+            unsupported: true,
+            folders: [],
+            error: 'Firefox for Android does not support the WebExtensions Bookmarks API (Mozilla Bug 1796596).'
+          });
+          break;
+        }
         const folders = await getSortingScopeFolders();
         sendResponse({ success: true, folders });
         break;
@@ -674,8 +683,8 @@ if (chrome.bookmarks?.onCreated) {
   chrome.bookmarks.onRemoved?.addListener(invalidateBookmarkTreeCache);
   chrome.bookmarks.onChanged?.addListener(invalidateBookmarkTreeCache);
   chrome.bookmarks.onMoved?.addListener(invalidateBookmarkTreeCache);
-  if (chrome.bookmarks.onChildrenReordered) {
-    chrome.bookmarks.onChildrenReordered.addListener(invalidateBookmarkTreeCache);
+  if (chrome.bookmarks['onChildrenReordered']) {
+    chrome.bookmarks['onChildrenReordered'].addListener(invalidateBookmarkTreeCache);
   }
 }
 
@@ -883,7 +892,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       let response;
       try {
         const baseUrl = rawBaseUrl.replace(/\/+$/, '');
-        const openaiModel = settings.openaiCustomModel?.trim() || settings.openaiModel || '';
+        const openaiModel = settings.openaiCustomModel?.trim() || settings.openaiModel || 'gpt-4o-mini';
         const requestBody = {
           model: openaiModel,
           max_tokens: maxTokens,
@@ -931,9 +940,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       if (!settings.openrouterApiKey || !settings.openrouterApiKey.trim()) {
         throw new Error('OpenRouter API key is not configured. Please open Extension Settings to enter your API key.');
       }
-      if (!settings.openrouterModel || !settings.openrouterModel.trim()) {
-        throw new Error('OpenRouter model is not selected. Please open Extension Settings to choose a model.');
-      }
+      const openrouterModel = settings.openrouterModel?.trim() || 'anthropic/claude-3.5-haiku';
       let response;
       try {
         response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -945,7 +952,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
             'X-Title': 'AIJbookmarks'
           },
           body: JSON.stringify({
-            model: settings.openrouterModel,
+            model: openrouterModel,
             max_tokens: maxTokens,
             messages: [{ role: 'user', content: prompt }],
             reasoning: {
@@ -977,8 +984,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
     } else if (provider === 'google-cloud') {
       let response;
       try {
-        const model = String(settings.googleCloudModel || '').replace(/^models\//, '');
-        if (!model) throw new Error('No Google Cloud model selected. Open Extension Settings and click Load Models.');
+        const model = String(settings.googleCloudModel || '').replace(/^models\//, '') || 'gemini-2.5-flash';
         const rawApiKey = typeof settings.googleCloudApiKey === 'string' ? settings.googleCloudApiKey.trim() : '';
         if (!rawApiKey) {
           throw new Error('Google Cloud API key not configured. Please configure it in Extension Settings.');
@@ -1055,9 +1061,8 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       if (!geminiKey) {
         throw new Error('Gemini API key not configured. Please configure it in Extension Settings.');
       }
-      const rawModel = normalizeGeminiModel(settings.geminiModel);
-      if (!rawModel) throw new Error('No Gemini model selected. Open Extension Settings and click Load Models.');
-      const geminiModels = [rawModel];
+      const rawModel = normalizeGeminiModel(settings.geminiModel) || 'gemini-2.5-flash';
+      const geminiModels = [rawModel, 'gemini-2.5-flash', 'gemini-1.5-flash'].filter(Boolean);
       const uniqueGeminiModels = [...new Set(geminiModels)];
 
       let response = null;
@@ -1125,13 +1130,17 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       if (!settings.anthropicApiKey || !settings.anthropicApiKey.trim()) {
         throw new Error('Anthropic Claude API key is not configured. Please open Extension Settings to enter your API key.');
       }
-      if (!settings.anthropicModel) {
-        throw new Error('No Anthropic model selected. Open Extension Settings and click Load Models.');
-      }
-      const anthropicModels = [settings.anthropicModel];
+      const rawAnthropicModel = (settings.anthropicModel || '').trim() || 'claude-3-5-haiku-20241022';
+      const anthropicModels = [
+        rawAnthropicModel,
+        'claude-3-5-haiku-20241022',
+        'claude-3-haiku-20240307',
+        'claude-3-5-sonnet-20241022'
+      ];
+      const uniqueAnthropicModels = [...new Set(anthropicModels)];
       let response = null;
       let lastErrorText = '';
-      for (const anthropicModel of anthropicModels) {
+      for (const anthropicModel of uniqueAnthropicModels) {
         try {
           response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
@@ -1464,16 +1473,17 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
     const settings = await chrome.storage.sync.get({
       aiProvider: 'anthropic',
       anthropicApiKey: '',
-      anthropicModel: '',
+      anthropicModel: 'claude-3-5-haiku-20241022',
       openaiApiKey: '',
       openaiBaseUrl: 'https://api.openai.com/v1',
-      openaiModel: '',
+      openaiModel: 'gpt-4o-mini',
       openaiCustomModel: '',
       openrouterApiKey: '',
-      openrouterModel: '',
+      openrouterModel: 'anthropic/claude-3.5-haiku',
       geminiApiKey: '',
-      geminiModel: '',
+      geminiModel: 'gemini-2.5-flash',
       googleCloudApiKey: '',
+      googleCloudModel: 'gemini-2.5-flash',
       googleCloudModel: '',
       instapaperUsername: '',
       instapaperPassword: '',
@@ -1496,9 +1506,6 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
     } else if (provider === 'openrouter') {
       if (!settings.openrouterApiKey || settings.openrouterApiKey.trim() === '') {
         throw new Error('OpenRouter API key not configured. Please configure it in Extension Settings.');
-      }
-      if (!settings.openrouterModel || settings.openrouterModel.trim() === '') {
-        throw new Error('OpenRouter model not selected. Please select a model in Extension Settings.');
       }
     } else if (provider === 'gemini') {
       if (!settings.geminiApiKey || settings.geminiApiKey.trim() === '') {
@@ -1547,9 +1554,13 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
     // If auto-bookmark is enabled and it's not an article, create the bookmark
     // Articles are saved to Instapaper instead of Chrome bookmarks
     if (autoBookmark && !analysis.isArticle) {
-      const categoryPath = analysis.matchedCategory || 'Other';
-      bookmarkId = await createBookmarkInCategory(url, analysis.title || title, categoryPath);
-      bookmarkCreated = true;
+      if (chrome.bookmarks?.create) {
+        const categoryPath = analysis.matchedCategory || 'Other';
+        bookmarkId = await createBookmarkInCategory(url, analysis.title || title, categoryPath);
+        bookmarkCreated = true;
+      } else {
+        console.warn('Bookmarks API not supported on this platform (Firefox for Android). Skipped local bookmark creation.');
+      }
     }
 
     return {
@@ -1933,7 +1944,8 @@ async function getUnsortedBookmarks(scope = {}) {
     return {
       bookmarks: [],
       scopeLabel: 'Bookmarks are not supported on Firefox for Android',
-      unsupported: true
+      unsupported: true,
+      error: 'Firefox for Android does not support the WebExtensions Bookmarks API (Mozilla Bug 1796596). Please sync your bookmarks with Firefox Desktop via Firefox Sync to use AI bookmark sorting.'
     };
   }
   await initializeRootIds();
@@ -3009,18 +3021,18 @@ async function getAIConfig() {
   const defaults = {
     aiProvider: 'anthropic',
     anthropicApiKey: '',
-    anthropicModel: '',
+    anthropicModel: 'claude-3-5-haiku-20241022',
     openaiApiKey: '',
     openaiBaseUrl: 'https://api.openai.com/v1',
-    openaiModel: '',
+    openaiModel: 'gpt-4o-mini',
     openaiCustomModel: '',
     modelContextWindow: 131072,
     openrouterApiKey: '',
-    openrouterModel: '',
+    openrouterModel: 'anthropic/claude-3.5-haiku',
     geminiApiKey: '',
-    geminiModel: '',
+    geminiModel: 'gemini-2.5-flash',
     googleCloudApiKey: '',
-    googleCloudModel: '',
+    googleCloudModel: 'gemini-2.5-flash',
     domainRules: [],
     sortAllowCreateFolders: false,
     sortNewFolderLocation: 'root-bar',
@@ -3403,6 +3415,13 @@ async function politenessDelay(url, hostLastRequestAt) {
  * @returns {Promise<{ success: boolean, summary: object }>}
  */
 async function runHealthCheck() {
+  if (!chrome.bookmarks?.getTree) {
+    return {
+      success: false,
+      unsupported: true,
+      error: 'Firefox for Android does not support the WebExtensions Bookmarks API (Mozilla Bug 1796596). Please use Firefox Desktop to audit bookmarks.'
+    };
+  }
   const settings = await chrome.storage.sync.get({ healthCheckStaleDays: 365 });
   const staleDays = settings.healthCheckStaleDays || 365;
 

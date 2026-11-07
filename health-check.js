@@ -320,7 +320,10 @@ function buildResultCard(entry) {
   if (entry.newUrl && !entry.fixed) {
     const redirectInfo = document.createElement('div');
     redirectInfo.className = 'result-new-url';
-    redirectInfo.innerHTML = `<strong>Redirects to:</strong> ${escapeHtml(entry.newUrl)}`;
+    const strong = document.createElement('strong');
+    strong.textContent = 'Redirects to: ';
+    redirectInfo.appendChild(strong);
+    redirectInfo.appendChild(document.createTextNode(entry.newUrl));
     card.appendChild(redirectInfo);
   }
 
@@ -328,7 +331,10 @@ function buildResultCard(entry) {
   if (entry.newTitle && !entry.fixed) {
     const titleInfo = document.createElement('div');
     titleInfo.className = 'result-new-url';
-    titleInfo.innerHTML = `<strong>New title:</strong> ${escapeHtml(entry.newTitle)}`;
+    const strong = document.createElement('strong');
+    strong.textContent = 'New title: ';
+    titleInfo.appendChild(strong);
+    titleInfo.appendChild(document.createTextNode(entry.newTitle));
     card.appendChild(titleInfo);
   }
 
@@ -560,7 +566,13 @@ function showError(msg) {
   list.textContent = '';
   const el = document.createElement('div');
   el.className = 'empty-state';
-  el.innerHTML = `<div class="empty-icon">⚠️</div><p>${escapeHtml(msg)}</p>`;
+  const icon = document.createElement('div');
+  icon.className = 'empty-icon';
+  icon.textContent = '⚠️';
+  const p = document.createElement('p');
+  p.textContent = msg;
+  el.appendChild(icon);
+  el.appendChild(p);
   list.appendChild(el);
 }
 
@@ -760,8 +772,4 @@ function timeAgo(timestampMs) {
   return `${years}yr ago`;
 }
 
-const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
 
-function escapeHtml(str) {
-  return (str || '').replace(/[&<>]/g, ch => HTML_ESCAPE_MAP[ch]);
-}

@@ -7,16 +7,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const defaultSettings = {
     aiProvider: 'anthropic',
     anthropicApiKey: '',
+    anthropicModel: 'claude-3-5-haiku-20241022',
     openaiApiKey: '',
     openaiBaseUrl: 'https://api.openai.com/v1',
-    openaiModel: '',
+    openaiModel: 'gpt-4o-mini',
     openaiCustomModel: '',
     openrouterApiKey: '',
-    openrouterModel: '',
+    openrouterModel: 'anthropic/claude-3.5-haiku',
     geminiApiKey: '',
-    geminiModel: '',
+    geminiModel: 'gemini-2.5-flash',
     googleCloudApiKey: '',
-    googleCloudModel: '',
+    googleCloudModel: 'gemini-2.5-flash',
     instapaperUsername: '',
     instapaperPassword: '',
     todoistApiToken: '',
@@ -82,6 +83,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (configWarning) {
     showStatus(configWarning, 'warning');
     document.getElementById('analyzeBtn').disabled = true;
+  }
+
+  const autoBookmarkCb = document.getElementById('autoBookmark');
+  if (!chrome.bookmarks?.create && autoBookmarkCb) {
+    autoBookmarkCb.checked = false;
+    autoBookmarkCb.disabled = true;
+    const label = autoBookmarkCb.closest('label') || autoBookmarkCb.parentElement;
+    if (label) {
+      label.title = 'Bookmarks API is not supported on Firefox for Android (Mozilla Bug 1796596).';
+      const smallNote = document.createElement('span');
+      smallNote.style.fontSize = '11px';
+      smallNote.style.color = '#888';
+      smallNote.style.marginLeft = '4px';
+      smallNote.textContent = '(Desktop only)';
+      label.appendChild(smallNote);
+    }
   }
 
   document.getElementById('saveToInstapaper').checked = settings.instapaperCheckedByDefault === true;

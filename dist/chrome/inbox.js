@@ -205,17 +205,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     const alertBox = document.getElementById('alertBox');
     if (alertBox && bookmarks.length > 0) {
       alertBox.className = 'alert alert-info';
-      alertBox.innerHTML = `ℹ️ Using <strong>built-in ${activeModelName} engine</strong> for bookmark sorting. For full model weights, <a href="#" id="openSettingsAlertLink" style="color:#1a73e8;font-weight:600;text-decoration:underline;">download in Settings</a>.`;
-      document.getElementById('openSettingsAlertLink')?.addEventListener('click', (e) => {
+      alertBox.textContent = '';
+      alertBox.appendChild(document.createTextNode('ℹ️ Using '));
+      const strong = document.createElement('strong');
+      strong.textContent = `built-in ${activeModelName} engine`;
+      alertBox.appendChild(strong);
+      alertBox.appendChild(document.createTextNode(' for bookmark sorting. For full model weights, '));
+      const a = document.createElement('a');
+      a.href = '#';
+      a.id = 'openSettingsAlertLink';
+      a.style.color = '#1a73e8';
+      a.style.fontWeight = '600';
+      a.style.textDecoration = 'underline';
+      a.textContent = 'download in Settings';
+      a.addEventListener('click', (e) => {
         e.preventDefault();
         chrome.runtime.openOptionsPage();
       });
+      alertBox.appendChild(a);
+      alertBox.appendChild(document.createTextNode('.'));
     }
   } else if (aiConfig?.hasLocalAI && !aiConfig?.hasCloudAI) {
     const alertBox = document.getElementById('alertBox');
     if (alertBox && bookmarks.length > 0 && alertBox.classList.contains('alert-loading')) {
       alertBox.className = 'alert alert-info';
-      alertBox.innerHTML = `🧠 <strong>Local ${activeModelName} Model Active.</strong> Bookmarks will be organized on-device without cloud API keys.`;
+      alertBox.textContent = '';
+      alertBox.appendChild(document.createTextNode('🧠 '));
+      const strong = document.createElement('strong');
+      strong.textContent = `Local ${activeModelName} Model Active.`;
+      alertBox.appendChild(strong);
+      alertBox.appendChild(document.createTextNode(' Bookmarks will be organized on-device without cloud API keys.'));
     }
   }
 });
@@ -309,6 +328,11 @@ async function loadSortingScopeFolders(savedNewFolderLocation = null) {
     let folderList = [];
     try {
       const response = await chrome.runtime.sendMessage({ action: 'getSortingScopeFolders' });
+      if (response?.unsupported) {
+        select.disabled = true;
+        document.getElementById('scopeNote').textContent = 'Mozilla has not implemented the WebExtensions Bookmarks API on mobile (Bug 1796596). Use Firefox Desktop with Firefox Sync to sort bookmarks.';
+        return;
+      }
       if (response?.success && Array.isArray(response.folders) && response.folders.length > 0) {
         folderList = response.folders;
       }
@@ -568,6 +592,21 @@ async function loadUnsortedBookmarks() {
     document.getElementById('refreshScopeBtn').disabled = false;
   }
 
+  if (response?.unsupported) {
+    clearBookmarkTable(
+      '⚠️ Firefox for Android does not support the WebExtensions Bookmarks API (Mozilla Bug 1796596). ' +
+      'Bookmark reading and sorting are supported on Firefox Desktop. ' +
+      'Please sync your mobile bookmarks with desktop Firefox via Firefox Sync.'
+    );
+    const sortScopeMode = document.getElementById('sortScopeMode');
+    if (sortScopeMode) sortScopeMode.disabled = true;
+    const sortFolderSelect = document.getElementById('sortFolderSelect');
+    if (sortFolderSelect) sortFolderSelect.disabled = true;
+    document.getElementById('refreshScopeBtn').disabled = true;
+    document.getElementById('scopeDescription').textContent = 'Bookmarks API is not supported on Firefox for Android.';
+    document.getElementById('scopeNote').textContent = 'Mozilla GeckoView does not implement the WebExtensions bookmarks API on Android (Bug 1796596). Use Firefox Desktop with Firefox Sync to organize bookmarks.';
+    return;
+  }
   if (response?.noFolderSelected) {
     clearBookmarkTable('Choose a folder or subfolder above to load its direct bookmarks.');
     return;
