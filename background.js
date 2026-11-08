@@ -817,7 +817,8 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
 
       const data = await response.json();
       const parts = data.candidates?.[0]?.content?.parts || [];
-      const responseText = parts.map(p => p.text || '').join('\n').trim();
+      const answerParts = parts.filter(p => !p.thought);
+      const responseText = (answerParts.length ? answerParts : parts).map(p => p.text || '').join('\n').trim();
       if (!responseText) {
         console.error('No content in Google Cloud response:', JSON.stringify(data));
         throw new Error('No content in Google Cloud response');
@@ -840,7 +841,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
             'x-goog-api-key': geminiKey
           },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { maxOutputTokens: maxTokens }
           }),
           signal: controller.signal
@@ -861,7 +862,8 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
 
       const data = await response.json();
       const parts = data.candidates?.[0]?.content?.parts || [];
-      const responseText = parts.map(p => p.text || '').join('\n').trim();
+      const answerParts = parts.filter(p => !p.thought);
+      const responseText = (answerParts.length ? answerParts : parts).map(p => p.text || '').join('\n').trim();
       if (!responseText) {
         console.error('No content in Gemini response:', JSON.stringify(data));
         throw new Error('No content in Gemini response');
