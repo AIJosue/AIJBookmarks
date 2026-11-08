@@ -617,6 +617,29 @@ async function fetchHtmlContent(url, maxChars = 8000) {
  * @returns {Promise<string>} Raw response text from the AI
  */
 /**
+ * Extracts the final answer text from a Gemini generateContent response.
+ * Skips reasoning ("thought") parts and reports blocked/truncated generations clearly.
+ */
+function extractGeminiText(data, label) {
+  const candidate = data?.candidates?.[0];
+  const parts = candidate?.content?.parts || [];
+  const answerParts = parts.filter(p => !p.thought);
+  const text = answerParts.map(p => p.text || '').join('\n').trim();
+  const reason = candidate?.finishReason;
+  if (!text) {
+    console.error(`No content in ${label} response:`, JSON.stringify(data));
+    if (data?.promptFeedback?.blockReason) {
+      throw new Error(`${label} blocked the prompt (${data.promptFeedback.blockReason}).`);
+    }
+    if (reason === 'MAX_TOKENS') {
+      throw new Error(`${label} ran out of output tokens before producing an answer (model reasoning used the budget). Try a smaller batch size.`);
+    }
+    throw new Error(`No content in ${label} response${reason ? ` (finishReason: ${reason})` : ''}`);
+  }
+  return text;
+}
+
+/**
  * Calls the configured AI provider with stats (tokens and duration).
  * @param {string} prompt
  * @param {object} settings
@@ -797,7 +820,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
           },
           body: JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: maxTokens }
+            generationConfig: { responseMimeType: 'application/json' }
           }),
           signal: controller.signal
         });
@@ -816,13 +839,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       }
 
       const data = await response.json();
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const answerParts = parts.filter(p => !p.thought);
-      const responseText = (answerParts.length ? answerParts : parts).map(p => p.text || '').join('\n').trim();
-      if (!responseText) {
-        console.error('No content in Google Cloud response:', JSON.stringify(data));
-        throw new Error('No content in Google Cloud response');
-      }
+      const responseText = extractGeminiText(data, 'Google Cloud');
       const inputTokens = data.usageMetadata?.promptTokenCount ?? estimateTokensFromText(prompt);
       const outputTokens = data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(responseText);
       return { responseText, inputTokens, outputTokens, durationMs: Date.now() - startTime };
@@ -842,7 +859,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
           },
           body: JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: maxTokens }
+            generationConfig: { responseMimeType: 'application/json' }
           }),
           signal: controller.signal
         });
@@ -861,13 +878,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       }
 
       const data = await response.json();
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const answerParts = parts.filter(p => !p.thought);
-      const responseText = (answerParts.length ? answerParts : parts).map(p => p.text || '').join('\n').trim();
-      if (!responseText) {
-        console.error('No content in Gemini response:', JSON.stringify(data));
-        throw new Error('No content in Gemini response');
-      }
+      const responseText = extractGeminiText(data, 'Gemini');
       const inputTokens = data.usageMetadata?.promptTokenCount ?? estimateTokensFromText(prompt);
       const outputTokens = data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(responseText);
       return { responseText, inputTokens, outputTokens, durationMs: Date.now() - startTime };
@@ -1844,6 +1855,30 @@ function extractJsonPayload(responseText, expectedType) {
       }
     } catch {
       // Try the next candidate; model output may contain prose or multiple blocks.
+    }
+  }
+  if (expectedType === 'array') {
+    // Salvage complete objects from a truncated array (e.g. output cut off mid-response).
+    const start = text.indexOf('[');
+    if (start >= 0) {
+      const objs = [];
+      let depth = 0, objStart = -1, inStr = false, esc = false;
+      for (let i = start + 1; i < text.length; i++) {
+        const ch = text[i];
+        if (inStr) {
+          if (esc) esc = false;
+          else if (ch === '\\') esc = true;
+          else if (ch === '"') inStr = false;
+          continue;
+        }
+        if (ch === '"') inStr = true;
+        else if (ch === '{') { if (depth++ === 0) objStart = i; }
+        else if (ch === '}' && --depth === 0 && objStart >= 0) {
+          try { objs.push(JSON.parse(text.slice(objStart, i + 1))); } catch { /* skip malformed object */ }
+          objStart = -1;
+        }
+      }
+      if (objs.length) return objs;
     }
   }
   return null;

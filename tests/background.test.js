@@ -11,6 +11,8 @@ let handleGetAISuggestionsBatch;
 let invalidateBookmarkTreeCache;
 let getSortingScopeFolders;
 let getUnsortedBookmarks;
+let extractJsonPayload;
+let extractGeminiText;
 
 beforeEach(async () => {
   globalThis.chrome = {
@@ -59,7 +61,9 @@ beforeEach(async () => {
               handleGetAISuggestionsBatch,
               invalidateBookmarkTreeCache,
               getSortingScopeFolders,
-              getUnsortedBookmarks
+              getUnsortedBookmarks,
+              extractJsonPayload,
+              extractGeminiText
             };
         })()
     `);
@@ -73,6 +77,8 @@ beforeEach(async () => {
   invalidateBookmarkTreeCache = moduleScope.invalidateBookmarkTreeCache;
   getSortingScopeFolders = moduleScope.getSortingScopeFolders;
   getUnsortedBookmarks = moduleScope.getUnsortedBookmarks;
+  extractJsonPayload = moduleScope.extractJsonPayload;
+  extractGeminiText = moduleScope.extractGeminiText;
   invalidateBookmarkTreeCache();
 });
 
@@ -521,5 +527,18 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
       globalThis.chrome.storage.sync.get = originalGetSync;
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it('should skip Gemini thought parts and surface MAX_TOKENS clearly', () => {
+    const ok = { candidates: [{ content: { parts: [{ thought: true, text: 'think [x]' }, { text: '[{"id":"1"}]' }] } }] };
+    assert.strictEqual(extractGeminiText(ok, 'Gemini'), '[{"id":"1"}]');
+    const cut = { candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ thought: true, text: 'x' }] } }] };
+    assert.throws(() => extractGeminiText(cut, 'Gemini'), /ran out of output tokens/);
+  });
+
+  it('should salvage complete objects from a truncated JSON array', () => {
+    const out = extractJsonPayload('[{"id":"1","matchedCategory":"A"},{"id":"2","matchedCategory":"B"},{"id":"3","matc', 'array');
+    assert.strictEqual(out.length, 2);
+    assert.strictEqual(out[1].id, '2');
   });
 });
