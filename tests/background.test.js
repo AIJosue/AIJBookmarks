@@ -13,6 +13,8 @@ let getSortingScopeFolders;
 let getUnsortedBookmarks;
 let extractJsonPayload;
 let extractGeminiText;
+let callGeminiInteraction;
+let formatGeminiApiError;
 
 beforeEach(async () => {
   globalThis.chrome = {
@@ -63,7 +65,9 @@ beforeEach(async () => {
               getSortingScopeFolders,
               getUnsortedBookmarks,
               extractJsonPayload,
-              extractGeminiText
+              extractGeminiText,
+              callGeminiInteraction,
+              formatGeminiApiError
             };
         })()
     `);
@@ -79,6 +83,8 @@ beforeEach(async () => {
   getUnsortedBookmarks = moduleScope.getUnsortedBookmarks;
   extractJsonPayload = moduleScope.extractJsonPayload;
   extractGeminiText = moduleScope.extractGeminiText;
+  callGeminiInteraction = moduleScope.callGeminiInteraction;
+  formatGeminiApiError = moduleScope.formatGeminiApiError;
   invalidateBookmarkTreeCache();
 });
 
@@ -495,20 +501,21 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
         geminiModel: 'gemini-2.5-flash'
       });
 
-      globalThis.fetch = async (url) => {
+      let requestedBody = null;
+      let requestedHeaders = null;
+      globalThis.fetch = async (url, init) => {
         requestedUrl = url;
+        requestedBody = JSON.parse(init.body);
+        requestedHeaders = init.headers;
         return {
           ok: true,
           json: async () => ({
-            candidates: [
-              {
-                content: {
-                  parts: [
-                    { text: JSON.stringify([{ id: 'b2', matchedCategory: 'Developer' }]) }
-                  ]
-                }
-              }
-            ]
+            status: 'completed',
+            steps: [
+              { type: 'thought', summary: [{ type: 'text', text: 'thinking [x]' }] },
+              { type: 'model_output', content: [{ type: 'text', text: JSON.stringify([{ id: 'b2', matchedCategory: 'Developer' }]) }] }
+            ],
+            usage: { total_input_tokens: 10, total_output_tokens: 5, total_thought_tokens: 20 }
           })
         };
       };
@@ -522,7 +529,12 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
       assert.strictEqual(response.results.length, 1);
       assert.strictEqual(response.results[0].id, 'b2');
       assert.strictEqual(response.results[0].matchedCategory, 'Developer');
-      assert.ok(requestedUrl.includes('models/gemini-2.5-flash:generateContent'));
+      assert.strictEqual(requestedUrl, 'https://generativelanguage.googleapis.com/v1beta/interactions');
+      assert.strictEqual(requestedBody.model, 'gemini-2.5-flash');
+      assert.strictEqual(typeof requestedBody.input, 'string');
+      assert.strictEqual(requestedBody.store, false);
+      assert.strictEqual(requestedBody.generation_config, undefined);
+      assert.strictEqual(requestedHeaders['x-goog-api-key'], 'AQ-test-key-999');
     } finally {
       globalThis.chrome.storage.sync.get = originalGetSync;
       globalThis.fetch = originalFetch;
@@ -540,5 +552,27 @@ describe('Folder Filtering & Normalization (Mozilla Firefox Protection)', () => 
     const out = extractJsonPayload('[{"id":"1","matchedCategory":"A"},{"id":"2","matchedCategory":"B"},{"id":"3","matc', 'array');
     assert.strictEqual(out.length, 2);
     assert.strictEqual(out[1].id, '2');
+  });
+
+  it('should follow Gemini requires_continuation and report API errors cleanly', async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      const bodies = [];
+      const replies = [
+        { status: 'requires_continuation', continuation_token: 'tok1', steps: [{ type: 'model_output', content: [{ type: 'text', text: '[{"id":"1"},' }] }] },
+        { status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: '{"id":"2"}]' }] }] }
+      ];
+      globalThis.fetch = async (_url, init) => {
+        bodies.push(JSON.parse(init.body));
+        return { ok: true, json: async () => replies[bodies.length - 1] };
+      };
+      const res = await callGeminiInteraction('p', { geminiApiKey: 'k', geminiModel: 'models/gemini-3.8-flash' }, undefined, 1000, Date.now());
+      assert.strictEqual(res.responseText, '[{"id":"1"},\n{"id":"2"}]');
+      assert.strictEqual(bodies[0].model, 'gemini-3.8-flash');
+      assert.strictEqual(bodies[1].continuation_token, 'tok1');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+    assert.match(formatGeminiApiError(400, '{"error":{"message":"bad model","status":"INVALID_ARGUMENT"}}'), /400 - bad model/);
   });
 });

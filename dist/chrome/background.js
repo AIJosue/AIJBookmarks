@@ -601,8 +601,131 @@ async function fetchHtmlContent(url, maxChars = 8000) {
   }
 }
 
+const GEMINI_INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+const GEMINI_MAX_CONTINUATIONS = 4;
+
 /**
- * Extracts the final answer text from a Gemini generateContent response.
+ * Collects the final answer text from a Gemini Interactions API response.
+ * Only `model_output` steps carry the answer; `thought` steps (reasoning) are ignored.
+ * @param {object} interaction - Interaction resource returned by POST /v1beta/interactions
+ * @returns {string}
+ */
+function extractInteractionText(interaction) {
+  const parts = [];
+  for (const step of interaction?.steps || []) {
+    if (step?.type !== 'model_output') continue;
+    for (const block of step.content || []) {
+      if (block?.type === 'text' && typeof block.text === 'string') parts.push(block.text);
+    }
+  }
+  return parts.join('\n').trim();
+}
+
+/**
+ * Calls the Google AI Studio Gemini Interactions API
+ * (https://aistudio.google.com/api-reference/interactions-api).
+ *
+ * - POST /v1beta/interactions with `model`, `input` and a JSON `response_format`.
+ * - `store: false` so nothing is persisted server-side and no extra state is kept.
+ * - No thinking or token settings are injected: the user's chosen model runs with its defaults.
+ * - Follows `requires_continuation` by passing the returned `continuation_token` back unchanged.
+ */
+async function callGeminiInteraction(prompt, settings, signal, timeoutMs, startTime) {
+  const apiKey = typeof settings.geminiApiKey === 'string' ? settings.geminiApiKey.trim() : '';
+  if (!apiKey) {
+    throw new Error('Gemini API key not configured. Please configure it in Extension Settings.');
+  }
+  const model = String(settings.geminiModel || '').replace(/^models\//, '').trim() || 'gemini-2.5-flash';
+
+  const texts = [];
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let continuationToken = null;
+
+  for (let attempt = 0; attempt <= GEMINI_MAX_CONTINUATIONS; attempt++) {
+    const body = {
+      model,
+      input: prompt,
+      response_format: { type: 'text', mime_type: 'application/json' },
+      store: false
+    };
+    if (continuationToken) body.continuation_token = continuationToken;
+
+    let response;
+    try {
+      response = await fetch(GEMINI_INTERACTIONS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify(body),
+        signal
+      });
+    } catch (error) {
+      console.error('Error calling Gemini Interactions API:', error);
+      if (error.name === 'AbortError') {
+        throw new Error(`Gemini API request timed out after ${Math.round(timeoutMs / 1000)} seconds.`);
+      }
+      throw new Error(`Failed to call Gemini API: ${error.message}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', response.status, errorText);
+      throw new Error(formatGeminiApiError(response.status, errorText));
+    }
+
+    const interaction = await response.json();
+    const text = extractInteractionText(interaction);
+    if (text) texts.push(text);
+    inputTokens += interaction.usage?.total_input_tokens ?? 0;
+    outputTokens += (interaction.usage?.total_output_tokens ?? 0) + (interaction.usage?.total_thought_tokens ?? 0);
+
+    const status = interaction.status;
+    if (status === 'requires_continuation' && interaction.continuation_token) {
+      continuationToken = interaction.continuation_token;
+      continue;
+    }
+    if (status === 'failed' || status === 'cancelled') {
+      console.error(`Gemini interaction ${status}:`, JSON.stringify(interaction));
+      throw new Error(`Gemini interaction ${status}.`);
+    }
+    if (status === 'incomplete' && !text) {
+      throw new Error('Gemini stopped before producing an answer (token limit reached). Try a smaller batch size.');
+    }
+    break;
+  }
+
+  const responseText = texts.join('\n').trim();
+  if (!responseText) {
+    throw new Error('No content in Gemini response');
+  }
+  return {
+    responseText,
+    inputTokens: inputTokens || estimateTokensFromText(prompt),
+    outputTokens: outputTokens || estimateTokensFromText(responseText),
+    durationMs: Date.now() - startTime
+  };
+}
+
+/**
+ * Formats a Gemini Interactions API error. Google returns `{"error": {"message", "status"}}`.
+ */
+function formatGeminiApiError(status, errorText) {
+  if (status === 429) {
+    return 'Gemini quota/rate limit reached (HTTP 429). Try again in a minute, reduce analyze batch size, switch provider/model, or raise Gemini quota.';
+  }
+  let message = String(errorText || '').replace(/\s+/g, ' ').trim();
+  try {
+    const parsed = JSON.parse(errorText);
+    if (parsed?.error?.message) message = parsed.error.message;
+  } catch {
+    // Not JSON; use the raw text.
+  }
+  if (message.length > 320) message = `${message.slice(0, 317)}...`;
+  return `Google Gemini API error: ${status}${message ? ` - ${message}` : ''}`;
+}
+
+/**
+ * Extracts the final answer text from a Vertex-style Gemini generateContent response (Google Cloud provider).
  * Skips reasoning ("thought") parts and reports blocked/truncated generations clearly.
  */
 function extractGeminiText(data, label) {
@@ -634,9 +757,6 @@ function extractGeminiText(data, label) {
  */
 async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
   function formatProviderApiError(activeProvider, status, errorText) {
-    if (activeProvider === 'gemini' && status === 429) {
-      return 'Gemini quota/rate limit reached (HTTP 429). Try again in a minute, reduce analyze batch size, switch provider/model, or raise Gemini quota.';
-    }
     const compact = String(errorText || '').replace(/\s+/g, ' ').trim();
     const short = compact.length > 320 ? `${compact.slice(0, 317)}...` : compact;
     const providerNames = {
@@ -648,10 +768,6 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
     };
     const providerName = providerNames[activeProvider] || (activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1));
     return `${providerName} API error: ${status}${short ? ` - ${short}` : ''}`;
-  }
-
-  function normalizeGeminiModel(model) {
-    return (model || '').replace(/^models\//, '').trim();
   }
 
   // Gemini, Google Cloud, or custom/local OpenAI endpoints can take longer
@@ -832,44 +948,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       const outputTokens = data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(responseText);
       return { responseText, inputTokens, outputTokens, durationMs: Date.now() - startTime };
     } else if (provider === 'gemini') {
-      const geminiKey = typeof settings.geminiApiKey === 'string' ? settings.geminiApiKey.trim() : '';
-      if (!geminiKey) {
-        throw new Error('Gemini API key not configured. Please configure it in Extension Settings.');
-      }
-      const model = normalizeGeminiModel(settings.geminiModel) || 'gemini-2.5-flash';
-      let response;
-      try {
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': geminiKey
-          },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: 'application/json' }
-          }),
-          signal: controller.signal
-        });
-      } catch (error) {
-        console.error('Error calling Gemini API:', error);
-        if (error.name === 'AbortError') {
-          throw new Error(`Gemini API request timed out after ${Math.round(TIMEOUT_MS / 1000)} seconds.`);
-        }
-        throw new Error(`Failed to call Gemini API: ${error.message}`);
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Gemini API error:', response.status, errorText);
-        throw new Error(formatProviderApiError('gemini', response.status, errorText));
-      }
-
-      const data = await response.json();
-      const responseText = extractGeminiText(data, 'Gemini');
-      const inputTokens = data.usageMetadata?.promptTokenCount ?? estimateTokensFromText(prompt);
-      const outputTokens = data.usageMetadata?.candidatesTokenCount ?? estimateTokensFromText(responseText);
-      return { responseText, inputTokens, outputTokens, durationMs: Date.now() - startTime };
+      return await callGeminiInteraction(prompt, settings, controller.signal, TIMEOUT_MS, startTime);
     } else {
       if (!settings.anthropicApiKey || !settings.anthropicApiKey.trim()) {
         throw new Error('Anthropic Claude API key is not configured. Please open Extension Settings to enter your API key.');
