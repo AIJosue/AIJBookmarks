@@ -165,6 +165,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   (async () => {
+    // MV3 service workers are terminated after ~30s without extension API activity,
+    // which drops the message channel ("Receiving end does not exist") during long
+    // AI calls. Ping an extension API while the request is in flight to keep it alive.
+    const keepAliveTimer = setInterval(() => {
+      try {
+        chrome.runtime.getPlatformInfo?.(() => { void chrome.runtime.lastError; });
+      } catch {
+        // Keep-alive is best-effort.
+      }
+    }, 20000);
     try {
       switch (request.action) {
       case 'analyzeBookmark': {
@@ -309,6 +319,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     } catch (error) {
       sendResponse({ success: false, error: error.message });
+    } finally {
+      clearInterval(keepAliveTimer);
     }
   })();
 
