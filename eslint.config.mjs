@@ -52,7 +52,9 @@ export default [
       }
     },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'eqeqeq': ['error', 'always', { null: 'ignore' }],
+      'no-empty': 'error',
       'no-undef': 'error',
       'no-console': 'off',
       'semi': ['error', 'always'],

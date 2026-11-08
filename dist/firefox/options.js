@@ -118,12 +118,6 @@ const FALLBACK_PRESETS = [
   { value: 1048576, label: '1M Context' }
 ];
 
-const _CONTEXT_WINDOW_LIMITS = {
-  min: 4096,
-  max: 2097152,
-  fallback: 131072
-};
-
 const SEMANTIC_BATCH_ESTIMATE = {
   defaultProfile: {
     inputBudgetRatio: 0.75,
@@ -227,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('loadModelsBtn').addEventListener('click', () => loadOpenRouterModels(null, true));
-  document.getElementById('loadOpenaiModelsBtn')?.addEventListener('click', () => loadOpenaiModels(true));
+  document.getElementById('loadOpenaiModelsBtn')?.addEventListener('click', () => loadOpenaiModels());
   document.getElementById('loadAnthropicModelsBtn')?.addEventListener('click', () => loadAnthropicModels(true));
   document.getElementById('loadGeminiModelsBtn')?.addEventListener('click', () => loadGeminiModels(true, null, false));
   document.getElementById('loadGoogleCloudModelsBtn')?.addEventListener('click', () => loadGeminiModels(true, null, true));
@@ -362,14 +356,6 @@ function triggerAutoSave() {
   autoSaveTimeout = setTimeout(async () => {
     await saveSettings();
   }, 1200);
-}
-
-function _isValidGeminiApiKey(apiKey) {
-  if (!apiKey) {
-    return false;
-  }
-  // Google now issues AQ.-prefixed keys; keep legacy AIza keys for backward compatibility.
-  return apiKey.startsWith('AQ.') || apiKey.startsWith('AIza');
 }
 
 function updateProviderUI(provider) {
@@ -592,45 +578,6 @@ async function loadFolderSuggestions() {
         console.warn('Fallback folder scan failed:', err);
       }
     }
-  }
-}
-
-async function _loadNewFolderLocationOptions(selectedLocation = 'root-bar') {
-  const select = document.getElementById('sortNewFolderLocation');
-  if (!select) return;
-  try {
-    const response = await chrome.runtime.sendMessage({ action: 'getSortingScopeFolders' });
-    select.textContent = '';
-
-    const optBar = document.createElement('option');
-    optBar.value = 'root-bar';
-    optBar.textContent = 'Bookmarks Bar / Toolbar (Default)';
-    select.appendChild(optBar);
-
-    const optOther = document.createElement('option');
-    optOther.value = 'root-other';
-    optOther.textContent = 'Other Bookmarks / Unfiled';
-    select.appendChild(optOther);
-
-    const optMenu = document.createElement('option');
-    optMenu.value = 'root-menu';
-    optMenu.textContent = 'Bookmarks Menu';
-    select.appendChild(optMenu);
-
-    for (const folder of response?.folders || []) {
-      if (folder.isRoot) continue;
-      const opt = document.createElement('option');
-      opt.value = folder.id;
-      const indent = folder.depth > 0 ? '  ↳ '.padStart(folder.depth * 2 + 3, ' ') : '';
-      opt.textContent = `${folder.rootName ? `[${folder.rootName}] ` : ''}${indent}${folder.path}`;
-      select.appendChild(opt);
-    }
-
-    if (selectedLocation) {
-      select.value = selectedLocation;
-    }
-  } catch (e) {
-    console.error('Error loading folder locations:', e);
   }
 }
 
@@ -901,7 +848,9 @@ async function loadOpenRouterModels(preselectedModel = null, forceRefresh = fals
         if (Array.isArray(cached?.openrouterModelsCache) && cached.openrouterModelsCache.length > 0) {
           models = cached.openrouterModelsCache;
         }
-      } catch {}
+      } catch {
+        // Cache read is optional; fall back to defaults.
+      }
     }
 
     if (!models) {
@@ -966,7 +915,7 @@ async function loadOpenRouterModels(preselectedModel = null, forceRefresh = fals
   }
 }
 
-async function loadOpenaiModels(_forceRefresh = false, preselectedModel = null) {
+async function loadOpenaiModels(preselectedModel = null) {
   const btn = document.getElementById('loadOpenaiModelsBtn');
   const select = document.getElementById('openaiModel');
   const apiKey = document.getElementById('openaiApiKey').value.trim();

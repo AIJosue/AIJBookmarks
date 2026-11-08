@@ -1,4 +1,3 @@
-const _USER_AGENT = 'Mozilla/5.0 (compatible; AIJbookmarks/1.0)';
 
 // Browser bookmark root IDs differ between browsers (e.g. Chrome uses '0', '1', '2', '3'; Firefox uses 'root________', 'toolbar_____', 'unfiled_____', 'menu________', 'mobile______')
 let BOOKMARK_ROOT_IDS = { ROOT: '0', BAR: '1', OTHER: '2', MENU: 'menu________', MOBILE: '3' };
@@ -332,25 +331,7 @@ function getSessionStorage() {
  * Uses TextEncoder / TextDecoder to convert between strings/objects and ArrayBuffers
  * allowing ownership transfer across contexts without structured cloning overhead.
  */
-const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
-
-function _encodeToTransferableArrayBuffer(data) {
-  const jsonString = typeof data === 'string' ? data : JSON.stringify(data);
-  const uint8 = textEncoder.encode(jsonString);
-  return uint8.buffer.slice(uint8.byteOffset, uint8.byteOffset + uint8.byteLength);
-}
-
-function _decodeTransferableArrayBuffer(buffer) {
-  if (!buffer) return null;
-  const uint8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-  const str = textDecoder.decode(uint8);
-  try {
-    return JSON.parse(str);
-  } catch {
-    return str;
-  }
-}
 
 /**
  * Cached traversal of the full bookmark tree. A single getTree() call derives
@@ -2562,15 +2543,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // ============================================================
 
 /**
- * Builds a map of bookmark node IDs to their folder paths.
- * @returns {Promise<Object<string, string>>} Map of nodeId -> "Folder/Path"
- */
-async function _getFolderPathMap() {
-  const { folderPathMap } = await getBookmarkTreeData();
-  return folderPathMap;
-}
-
-/**
  * Gets AI provider settings and validates credentials.
  * @returns {Promise<{settings: object, provider: string, hasAI: boolean}>}
  */
@@ -2854,12 +2826,10 @@ async function checkSingleBookmark(bookmark, staleDays = 365) {
 
   try {
     let response = await fetchWithTimeout(bookmark.url, 'HEAD', TIMEOUT_MS);
-    let _usedHead = !!response;
 
     if (!response || response.status >= 400) {
       abortResponseBody(response);
       response = await fetchWithTimeout(bookmark.url, 'GET', TIMEOUT_MS);
-      _usedHead = false;
     }
 
     if (!response) {
@@ -3082,7 +3052,9 @@ async function cleanLegacyLocalHealthCheckStorage() {
     if (keysToRemove.length > 0) {
       await chrome.storage.local.remove(keysToRemove);
     }
-  } catch {}
+  } catch {
+    // Best-effort cleanup; ignore storage errors.
+  }
 }
 
 // Clean up legacy disk storage on service worker initialization
