@@ -590,14 +590,6 @@ async function fetchHtmlContent(url, maxChars = 8000) {
 }
 
 /**
- * Calls the configured AI provider and returns the raw response text.
- * @param {string} prompt - The prompt to send
- * @param {object} settings - User settings from chrome.storage.sync
- * @param {string} provider - 'anthropic' | 'openai' | 'openrouter' | 'gemini' | 'google-cloud'
- * @param {number} [maxTokens=1024] - Maximum tokens in response
- * @returns {Promise<string>} Raw response text from the AI
- */
-/**
  * Extracts the final answer text from a Gemini generateContent response.
  * Skips reasoning ("thought") parts and reports blocked/truncated generations clearly.
  */
@@ -652,7 +644,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
 
   // Gemini, Google Cloud, or custom/local OpenAI endpoints can take longer
   const isCustomOpenAI = provider === 'openai' && Boolean(settings.openaiBaseUrl && !settings.openaiBaseUrl.includes('api.openai.com'));
-  const TIMEOUT_MS = (provider === 'gemini' || provider === 'google-cloud' || isCustomOpenAI) ? 120000 : 35000;
+  const TIMEOUT_MS = (provider === 'gemini' || provider === 'google-cloud' || isCustomOpenAI) ? 120000 : 90000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const startTime = Date.now();
@@ -671,7 +663,7 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
         max_tokens: maxTokens,
         messages: [{ role: 'user', content: prompt }]
       };
-      if (openaiModel.startsWith('o1') || openaiModel.startsWith('o3') || openaiModel.startsWith('o4')) {
+      if (/^(o\d|gpt-5)/.test(openaiModel)) {
         delete requestBody.max_tokens;
         requestBody.max_completion_tokens = maxTokens;
       }
@@ -733,6 +725,9 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
       const responseText = choice?.message?.content || choice?.text;
       if (!responseText) {
         console.error('No content in OpenAI response:', JSON.stringify(message));
+        if (choice?.finish_reason === 'length') {
+          throw new Error('OpenAI response hit the output token limit before producing an answer (reasoning may have used the budget). Try a smaller batch size.');
+        }
         throw new Error('No content in OpenAI response');
       }
       const inputTokens = message.usage?.prompt_tokens ?? estimateTokensFromText(prompt);
@@ -893,10 +888,10 @@ async function callAIWithStats(prompt, settings, provider, maxTokens = 1024) {
         throw new Error(`Failed to call Anthropic API: ${error.message}`);
       }
 
-      if (!response || !response.ok) {
+      if (!response.ok) {
         const errorText = await response.text();
-        console.error('Anthropic API error:', response?.status, errorText);
-        throw new Error(formatProviderApiError('anthropic', response?.status || 500, errorText));
+        console.error('Anthropic API error:', response.status, errorText);
+        throw new Error(formatProviderApiError('anthropic', response.status, errorText));
       }
 
       const message = await response.json();
@@ -2148,15 +2143,25 @@ async function handleGetFolderOrganizationData() {
   const folders = [];
   const rootIds = getProtectedRootIds();
 
+  const summaryCache = new Map();
   function summarize(node) {
+    const cached = summaryCache.get(node);
+    if (cached) return cached;
     const children = node.children || [];
-    const childFolders = children.filter(child => !child.url);
-    return {
-      bookmarkCount: children.filter(child => Boolean(child.url)).length
-        + childFolders.reduce((sum, child) => sum + summarize(child).bookmarkCount, 0),
-      descendantFolderCount: childFolders.length
-        + childFolders.reduce((sum, child) => sum + summarize(child).descendantFolderCount, 0)
-    };
+    let bookmarkCount = 0;
+    let descendantFolderCount = 0;
+    for (const child of children) {
+      if (child.url) {
+        bookmarkCount += 1;
+      } else {
+        const sub = summarize(child);
+        bookmarkCount += sub.bookmarkCount;
+        descendantFolderCount += 1 + sub.descendantFolderCount;
+      }
+    }
+    const result = { bookmarkCount, descendantFolderCount };
+    summaryCache.set(node, result);
+    return result;
   }
   function walk(nodes, parentPath = '', depth = 0) {
     for (const node of nodes || []) {
